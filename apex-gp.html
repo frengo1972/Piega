@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#10181c">
+<meta name="description" content="APEX GP: corse 3D in prima persona, sensori, gare e time attack. Un solo HTML, Three.js e audio procedurale.">
+<title>APEX GP — Onboard racing</title>
+<style>
+/* ==================== UI / RESPONSIVE ==================== */
+:root{--acid:#dcff52;--ice:#6be9de;--ink:#0c1418;--panel:rgba(12,20,24,.94);--muted:#a6b8bb;--line:#304047;--red:#ff655a;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);font:14px Arial,Helvetica,sans-serif;color:#f4f8f6;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+button,select,input{font:inherit}button,select{min-height:44px;border:1px solid var(--line);border-radius:8px;padding:10px 15px;color:inherit;background:#1a282e;cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--acid)}button:hover{border-color:var(--acid)}button:disabled{opacity:.4;cursor:wait}.primary{background:var(--acid);border-color:var(--acid);color:#142017;font-weight:900;letter-spacing:1px}.quiet{background:transparent}.hidden{display:none!important}#world,#touch,#vignette,#fade{position:fixed;inset:0}#world{display:block;width:100%;height:100%;touch-action:none}#touch{z-index:2;touch-action:none}#vignette{pointer-events:none;z-index:3;background:radial-gradient(ellipse at 50% 48%,transparent 40%,#04101466 100%)}#fade{z-index:16;background:#071014;pointer-events:none;opacity:0}#menu{position:fixed;inset:0;z-index:10;display:grid;grid-template-columns:1fr minmax(380px,460px);gap:40px;padding:32px 5vw;background:linear-gradient(90deg,#09171b33,#09171b77 45%,#09171bee);overflow:auto;align-items:center}.brand{align-self:start;max-width:600px}.eyebrow{font-size:10px;letter-spacing:3px;color:var(--acid);font-weight:800}.wordmark{font-size:clamp(58px,8vw,120px);font-style:italic;font-weight:1000;letter-spacing:-7px;line-height:.87;margin:20px 0}.wordmark span{color:var(--acid)}.strap{font-size:16px;line-height:1.7;color:#d4e1df;max-width:370px}.rule{width:58px;height:4px;background:var(--acid);margin:24px 0}.tag{display:inline-block;font:10px monospace;letter-spacing:2px;border:1px solid #6c8787;padding:8px 12px;border-radius:30px}.setup{padding:25px;border:1px solid #465b5e;border-radius:15px;background:var(--panel);box-shadow:0 25px 80px #0006}.setup h2{font-size:23px;margin:0 0 5px}.sub{color:var(--muted);font-size:12px;line-height:1.6}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:17px}label{font-size:11px;color:var(--muted);letter-spacing:.5px;display:block}label select{width:100%;margin-top:6px;font-size:12px}.span2{grid-column:span 2}.track-card{display:flex;align-items:center;gap:14px;background:#17282b;border:1px solid #32484b;padding:8px 12px;border-radius:9px;margin-top:16px}#trackPreview{width:115px;height:70px}.track-card strong{font-size:16px}.track-card p{margin:6px 0;font:11px monospace;color:var(--muted)}.controls{margin:16px 0;display:flex;gap:14px;font-size:11px;line-height:1.7;color:#c5d4d5}.controls b{color:var(--acid)}.actions{display:flex;gap:9px;flex-wrap:wrap}.actions .primary{flex:1}#start{width:100%;margin-top:10px;min-height:49px}#sensorStatus{margin-top:11px;min-height:17px;font-size:11px;color:var(--ice)}#hud{position:fixed;inset:0;z-index:4;pointer-events:none;padding:18px max(18px,env(safe-area-inset-right)) 0 max(18px,env(safe-area-inset-left))}.topline{display:flex;align-items:start;justify-content:space-between;gap:12px}.hud-brand{font-size:21px;font-weight:900;font-style:italic;letter-spacing:-1px}.hud-brand span{color:var(--acid)}.race-meta{display:flex;gap:24px;text-shadow:0 2px 6px #000}.race-meta small{display:block;font:9px monospace;letter-spacing:2px;color:#e1ebe7}.race-meta b{display:block;font:900 26px monospace;margin-top:3px}.race-meta em{font:12px monospace;color:var(--acid);font-style:normal}#pauseBtn,#calibrateBtn{pointer-events:auto;min-height:44px;background:#0b1929a6}#tools{display:flex;gap:8px}#calibrateBtn{font-size:11px}#miniWrap{position:absolute;right:20px;top:90px;background:#081c2499;border:1px solid #a4c0c533;border-radius:13px;padding:8px}#minimap{width:160px;height:120px;display:block}#minilabel{font:9px monospace;color:#b9d2d4;letter-spacing:1px;text-align:center}#standings{position:absolute;left:20px;top:83px;min-width:148px}.standing{font:11px monospace;padding:7px 10px;background:#0c1b23b8;margin-bottom:3px;border-left:2px solid #5a7177}.standing.me{color:var(--acid);border-color:var(--acid);background:#23372bd9}.pedal{position:absolute;bottom:25px;width:116px;pointer-events:none;color:#e5edec99;font:11px monospace;letter-spacing:3px}.pedal b{display:block;font-size:14px;margin-bottom:8px}.pedal i{display:block;height:4px;background:#ffffff22;border-radius:5px;overflow:hidden}.pedal i span{display:block;height:100%;width:0;background:var(--acid)}#brakePedal{left:25px}#brakePedal i span{background:var(--red)}#gasPedal{right:25px;text-align:right}#toast{position:absolute;left:50%;top:23%;transform:translateX(-50%);background:#0a1c25d9;border:1px solid #648086;padding:10px 20px;border-radius:6px;font:700 12px monospace;text-align:center;max-width:75vw;opacity:0;transition:opacity .2s}#countdown{position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);font:900 84px monospace;color:var(--acid);text-shadow:0 4px 15px #000}#bottomInfo{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;font:9px monospace;color:#d2ded9;white-space:nowrap}.modal{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:20px;background:#031014ad;backdrop-filter:blur(9px)}.dialog{width:min(560px,94vw);max-height:93vh;overflow:auto;background:var(--panel);border:1px solid #5d777d;border-radius:14px;padding:25px}.dialog h2{margin:0 0 10px}.setting{display:grid;grid-template-columns:1fr 1.1fr;align-items:center;gap:16px;margin:16px 0;font-size:12px}.setting input{width:100%;accent-color:var(--acid);min-height:28px}.setting select{width:100%;font-size:12px}.dialog p{color:var(--muted);font-size:12px;line-height:1.7}table{width:100%;border-collapse:collapse;font:12px monospace;margin:14px 0}th,td{text-align:left;border-bottom:1px solid #31434a;padding:9px 6px}th{color:var(--muted);font-size:10px}.highlight{color:var(--acid)}#result .dialog{width:min(780px,96vw)}.result-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}#rotate{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:#09171bed;text-align:center;padding:30px}#rotate b{font-size:30px;display:block;color:var(--acid);margin:15px}#fatal{position:fixed;inset:0;background:#09171b;z-index:30;padding:15vh 10vw;line-height:1.8}.split{height:1px;background:var(--line);margin:17px 0}#champStatus{font-size:10px;color:var(--acid);margin-top:12px}
+@media(max-height:560px) and (orientation:landscape){#menu{padding:12px 4vw;gap:25px;grid-template-columns:1fr minmax(390px,470px)}.setup{padding:15px}.setup h2{font-size:18px}.fields{gap:8px;margin-top:10px}label select{min-height:36px;padding:7px}.track-card{margin-top:9px}#trackPreview{height:46px}.controls{margin:8px 0;font-size:10px}.wordmark{font-size:70px}.strap{font-size:12px;max-width:260px}.brand{align-self:center}.rule{margin:18px 0}#start{min-height:42px;margin-top:8px}.actions button{min-height:36px;font-size:11px;padding:7px 10px}#hud{padding-top:10px}.race-meta b{font-size:21px}.race-meta{gap:18px}#minimap{width:125px;height:87px}#miniWrap{top:66px;right:14px}#standings{top:67px;left:14px}.standing{padding:5px 8px;font-size:10px}.pedal{bottom:18px;width:86px}#bottomInfo{bottom:5px}#calibrateBtn{max-width:110px;padding:6px}#toast{top:24%}}
+@media(orientation:portrait) and (pointer:coarse){#rotate{display:flex}#menu{grid-template-columns:1fr;padding:20px}.brand{display:none}}@media(max-width:700px){.result-grid{grid-template-columns:1fr}.brand .tag{display:none}.strap{max-width:220px}.hud-brand{display:none}.race-meta{gap:14px}}
+
+/* Comandi ai bordi: nessun elemento interattivo al centro del gioco. */
+#mobileControls{position:fixed;inset:0;z-index:6;pointer-events:none}
+.control-pad{pointer-events:auto;touch-action:none;border:1px solid #8da6a94d;background:#07171bc4;border-radius:12px;box-shadow:0 4px 18px #0003}
+#steerPad{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:max(17px,env(safe-area-inset-bottom));width:clamp(150px,25vw,210px);padding:10px 12px 7px}
+#steerPad label{text-align:center;font:700 10px monospace;letter-spacing:2px;color:#dcff52}
+#touchSteer{display:block;margin:4px 0 1px;width:100%;height:38px;min-height:38px;accent-color:#dcff52;cursor:ew-resize;touch-action:none}
+#steerStatus{font:9px monospace;color:#b8cdcc;line-height:1.4;text-align:center;min-height:24px}
+#drivePad{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(17px,env(safe-area-inset-bottom));width:78px;height:164px;cursor:ns-resize;outline-offset:3px}
+.drive-rail{position:absolute;left:30px;right:30px;top:29px;bottom:29px;border-radius:12px;background:linear-gradient(#dcff5240,transparent 45%,transparent 55%,#ff655a40);border:1px solid #8da6a966}
+.drive-center{position:absolute;top:50%;left:-8px;right:-8px;height:1px;background:#bbcfc899}
+#driveKnob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:20px;border:1px solid #d8e7df;border-radius:8px;background:#4b6566;box-shadow:0 2px 7px #0008;pointer-events:none}
+.drive-caption{position:absolute;left:7px;right:7px;text-align:center;font:700 10px monospace;letter-spacing:1px;line-height:1.4;pointer-events:none}
+.gas-caption{top:7px;color:#dcff52}.brake-caption{bottom:6px;color:#ff8b7e}
+.drive-caption i{display:block;height:3px;margin:2px 0;background:#ffffff20;border-radius:3px;overflow:hidden}
+.drive-caption i span{display:block;width:0;height:100%;background:currentColor}
+#bottomInfo{max-width:45vw;text-overflow:ellipsis;overflow:hidden}
+@media(max-height:360px) and (orientation:landscape){#drivePad{height:142px;bottom:12px}#steerPad{padding:6px 10px;bottom:12px;width:168px}#steerStatus{min-height:13px}#touchSteer{height:32px;min-height:32px}}
+
+#sensorPanel{z-index:15}#sensorPanel .dialog{width:min(740px,96vw)}.sensor-layout{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:12px 0}.sensor-layout p{margin:8px 0}.sensor-layout button{width:100%;margin-top:8px}.sensor-setting{margin:12px 0}.sensor-setting button{width:100%}.sensor-setting div{font:11px monospace;color:var(--ice);margin-top:6px}#sensorLiveDegrees{font:900 38px monospace;color:var(--acid);text-align:center}.sensor-track{height:5px;background:#516267;margin:12px auto;width:190px;position:relative}.sensor-track i{position:absolute;top:-6px;left:calc(50% - 8px);width:16px;height:16px;border-radius:50%;background:var(--acid)}.probe-row{display:flex;justify-content:space-between;gap:10px;font:10px monospace;border-top:1px solid var(--line);padding:9px 0}.probe-row span{text-align:right;color:var(--ice)}.sensor-peaks{display:flex;justify-content:space-around;font:9px monospace;text-align:center;letter-spacing:1px;margin:14px 0}.sensor-peaks b{display:block;font-size:25px;letter-spacing:0;color:var(--ice);margin-top:5px}#sensorSavedRange{margin-top:8px}#ghostStatus{font:9px monospace;color:var(--ice);text-align:center;margin:5px 0 0;max-width:165px}
+@media(max-height:500px) and (orientation:landscape){#sensorPanel .dialog{padding:15px}.sensor-layout{gap:16px;margin:5px 0}.sensor-layout p{font-size:11px;line-height:1.4;margin:5px 0}.sensor-layout button{min-height:38px;padding:7px}#sensorLiveDegrees{font-size:30px}.sensor-peaks{margin:8px 0}.probe-row{padding:5px 0}.sensor-peaks b{font-size:21px}#sensorPanel h2{font-size:20px;margin-bottom:6px}}
+@media(max-width:560px) and (orientation:portrait){.sensor-layout{grid-template-columns:1fr}}
+</style>
+<script>
+// ==================== CONFIG: tutti i parametri di bilanciamento ====================
+const CONFIG={
+ version:1,storageKey:'apex-gp-v1',laps:3,fixedStep:1/120,maxFrame:.1,
+ bikes:[
+  {name:'KAZE R125',label:'125 cc · 2T',cc:125,stroke:2,top:230,accel:9.8,brake:15.5,roll:5.5,gears:6,idle:2600,maxRPM:14000,shift:12900,down:6500,lean:57,color:0xdcff52,ratios:[2.85,2.03,1.57,1.28,1.10,1]},
+  {name:'VELORA RS250',label:'250 cc · 2T',cc:250,stroke:2,top:280,accel:12.9,brake:16.4,roll:4.4,gears:6,idle:2400,maxRPM:13500,shift:12500,down:6200,lean:58,color:0xff6858,ratios:[2.75,1.98,1.54,1.27,1.09,1]},
+  {name:'ORIX S600',label:'600 cc · 4T',cc:600,stroke:4,top:290,accel:14.6,brake:17.5,roll:3.6,gears:6,idle:1600,maxRPM:15500,shift:14400,down:6900,lean:56,color:0x68e4df,ratios:[2.65,1.94,1.52,1.25,1.08,1]}
+ ],
+ input:{dead:2.4,maxTilt:32,sensitivity:1,response:1.35,filter:10,throttleRamp:1.15,brakeRamp:.22,sensorTimeout:1800,minGravityProjection:1.2,driveTravel:70,driveDead:.055,steerTravel:90,driveAttack:12,driveRelease:20,minCalibratedTilt:8,maxCalibratedTilt:85,verifyMovementDegrees:2,calibrationFilter:7},
+ physics:{g:9.81,leanForce:1.18,drag:.00032,rolling:.32,engineBrake:.7,gravelDrag:2.8,gravelBrake:4.5,slipBonus:.065,slipRange:30,slipWidth:2.4,lowSpeed:7,fallLean:43,fallDelay:1.15,crashDuration:2.5,barrierImpact:8,collisionImpact:15,collisionWidth:.85,recoverySpeed:11,respawnShield:3},
+ ai:{count:11,grip:1.45,lateralRate:2.1,brakeLook:270,lookStep:14,passingDistance:26,passingOffset:2.7,gap:7,difficulty:[.78,.9,1.0],aggression:[.25,.45,.68,.82,.96,.38,.74,.56,.9,.6,.48]},
+ scoring:{positions:[25,20,16,13,11,10,9,8,7,6,5,4,3,2,1],fastLap:2,pass:5,leanPerSecond:2,leanThreshold:40,passCooldown:8},
+ graphics:{samples:2048,roadSegments:1600,width:16,runoff:21,barrier:33,headComp:.62,headLag:5.5,cameraHeight:1.16,cameraFOV:78,vibration:.005,smoothingStep:5,smoothingRadius:3,quality:[{dpr:1,trees:100,crowd:200,far:1700},{dpr:1.5,trees:230,crowd:450,far:2400},{dpr:2,trees:380,crowd:850,far:3000}]},
+ braking:{distances:[150,50],enterCurvature:.0018,exitCurvature:.00065,minTurnDegrees:8,minLength:12,boardOffset:3.1,width:2.1,height:1.7,roadClearance:.7},
+ lapRules:{curbWidth:1.1,limitMargin:.25,offTrackGrace:.45,offTrackTotal:1.25,hardOffTrack:5},
+ ghost:{minVisibleDistance:2.5,maxVisibleDistance:650},
+ audio:{volume:.55,engine:.09,wind:.17,opponent:.028,crowd:.025},
+ // Spline originali ricostruite da mappe pubbliche: sequenza e sagoma GP,
+ // non rilievi topografici. Lunghezze scalate a quelle dei circuiti.
+ // Riferimenti (solo consultazione; nessuna immagine o geometria importata):
+ // https://mugellocircuit.it/en/the-track/tracks-description
+ // https://www.misanocircuit.com/ ; https://circuitodejerez.com/circuito/
+ // Mappe consultate: Mugello PiantaMotoGP2024b; Jerez plano-web-circuito-2023;
+ // Misano: mappa nei risultati ufficiali GP 2025 (nessun asset incorporato).
+ // https://www.phillipislandcircuit.com.au/circuit-info/circuit-map/
+ tracks:[
+  {name:'Mugello',country:'ITALIA',length:5245,turns:15,theme:'hills',desc:'Rettilineo lungo · esse veloci',points:[[800,410],[925,488],[1023,549],[1040,564],[1041,579],[1025,589],[995,586],[960,581],[941,587],[922,614],[903,628],[882,625],[859,610],[759,539],[738,531],[722,534],[700,547],[682,551],[666,544],[569,456],[556,441],[554,419],[555,384],[548,364],[533,354],[450,327],[432,317],[422,299],[420,279],[430,244],[445,215],[464,192],[483,188],[530,198],[615,215],[633,221],[641,238],[642,262],[651,280],[677,289],[801,331],[819,342],[831,360],[828,378],[814,387],[798,388],[782,382],[738,353],[721,342],[706,339],[691,341],[678,336],[627,300],[516,225],[496,219],[480,220],[471,231],[469,246],[476,268],[489,284],[525,302],[650,355]]},
+  {name:'Misano',country:'ITALIA',length:4226,turns:16,theme:'coast',desc:'Tecnica · frenate e ripartenze',points:[[580,202],[510,229],[502,229],[493,224],[480,211],[471,208],[463,211],[444,226],[436,230],[426,229],[410,223],[390,204],[369,177],[368,168],[375,164],[391,163],[397,170],[405,189],[411,194],[491,191],[547,184],[600,172],[611,166],[614,157],[608,148],[593,140],[525,118],[508,119],[489,100],[489,90],[501,84],[518,85],[660,137],[672,145],[683,159],[720,214],[725,228],[727,261],[724,272],[689,294],[680,295],[678,288],[685,277],[706,246],[709,237],[704,227],[675,175],[670,169],[663,167],[656,169]]},
+  {name:'Jerez',country:'SPAGNA',length:4423,turns:13,theme:'dry',desc:'Tornanti · curve in appoggio',points:[[837,653],[702,799],[683,814],[653,817],[631,809],[531,742],[524,730],[533,720],[553,711],[581,708],[620,712],[657,706],[737,666],[784,639],[802,613],[803,591],[793,571],[680,461],[657,435],[643,412],[646,392],[660,378],[699,363],[733,358],[1095,386],[1340,410],[1377,419],[1387,428],[1383,439],[1365,448],[1240,467],[1185,479],[1141,495],[1117,520],[1072,623],[1068,642],[1077,656],[1101,667],[1146,678],[1194,678],[1360,637],[1394,634],[1417,641],[1430,654],[1434,699],[1426,714],[1410,722],[1310,737],[1084,768],[1050,762],[1037,750],[998,691],[983,676],[981,658],[993,621],[1024,544],[1052,504],[1056,489],[1047,479],[1034,477],[1022,484],[955,543]]},
+  {name:'Phillip Island',country:'AUSTRALIA',length:4448,turns:12,theme:'ocean',desc:'Scorrevole · curvoni sul mare',points:[[500,341],[625,341],[743,341],[772,355],[789,390],[797,430],[817,456],[865,485],[916,522],[938,550],[936,568],[921,583],[900,591],[855,585],[811,569],[763,541],[724,506],[699,486],[680,482],[661,484],[652,478],[653,468],[666,452],[670,442],[665,428],[647,408],[570,342],[546,334],[527,334],[518,346],[518,360],[521,389],[516,410],[491,440],[457,471],[429,488],[384,508],[352,518],[316,519],[288,510],[263,487],[251,454],[241,433],[228,426],[216,428],[197,427],[177,415],[172,394],[180,372],[200,356],[228,348],[272,343],[360,341]]}
+ ],
+ riders:[['M. Markez',93,0xf65443],['Pekko Bagnaya',63,0xdc333a],['J. Martino',89,0x9d70fa],['F. Quartararoom',20,0x3e88ff],['P. Acostino',37,0xff973c],['M. Bezzekki',72,0xa3ed46],['A. Markez',73,0x70c7ff],['F. Di Giannanto',49,0xdcff52],['M. Vignalestra',12,0xf277c4],['B. Binderino',33,0xf9a63c],['F. Morbidetto',21,0x6ff0d0]]
+};
+</script>
+</head>
+<body>
+<canvas id="world" aria-label="Pista tridimensionale"></canvas><div id="touch"></div><div id="vignette"></div><div id="fade"></div>
+<section id="menu">
+ <div class="brand"><div class="eyebrow">PURE ONBOARD RACING / 01</div><h1 class="wordmark">APEX<span>//</span><br>GP</h1><div class="rule"></div><p class="strap">Dentro il cupolino.<br>Sul filo della traiettoria.</p><span class="tag">3 CLASSI &nbsp; / &nbsp; 4 CIRCUITI &nbsp; / &nbsp; 12 PILOTI</span></div>
+ <div class="setup"><div class="eyebrow">IL TUO PROSSIMO GIRO</div><h2 style="margin-top:9px">Pronto sulla griglia.</h2><div class="sub">Scegli la moto. Trova il punto di corda.</div>
+  <div class="fields"><label class="span2">CLASSE<select id="bikeSelect"></select></label><label>PISTA<select id="trackSelect"></select></label><label>MODALITÀ<select id="modeSelect"><option value="race">Gara</option><option value="time">Time Attack + ghost</option><option value="champ">Campionato · 4 gare</option></select></label><label>DIFFICOLTÀ<select id="difficulty"><option value="0">Esordiente</option><option value="1" selected>Intermedio</option><option value="2">Esperto</option></select></label><label>GIRI<select id="lapsSelect"><option>1</option><option selected>3</option><option>5</option></select></label></div>
+  <div class="track-card"><canvas id="trackPreview" width="230" height="140"></canvas><div><strong id="trackName"></strong><p id="trackSpec"></p><p id="record"></p></div></div>
+  <div class="controls"><span><b>TELEFONO</b><br>Ruota per piegare<br>Sterzo in basso a sinistra · destra ↑ gas ↓ freno</span><span><b>DESKTOP</b><br>← → / A D sterzo · ↑ / W gas<br>↓ / S freno · P pausa · C centro</span></div>
+  <div class="actions"><button id="settingsOpen" class="quiet">Impostazioni</button><button id="sensorMenuOpen" class="quiet">Sensore / calibra</button><button id="champOpen" class="quiet">Classifica campionato</button></div><button id="start" class="primary" disabled>CARICAMENTO 3D…</button><div id="sensorStatus" role="status">Motore grafico in caricamento.</div><div id="champStatus"></div>
+ </div>
+</section>
+<div id="hud" class="hidden">
+ <div class="topline"><div class="hud-brand">APEX<span>//</span>GP</div><div class="race-meta"><div><small>POSIZIONE</small><b id="position">12<em>/12</em></b></div><div><small>GIRO</small><b id="lap">1<em>/3</em></b></div><div><small>TEMPO GIRO</small><b id="lapTime">0:00.000</b></div><div><small>BEST</small><b id="bestTime">—</b></div></div><div id="tools"><button id="calibrateBtn">Ricalibra centro</button><button id="pauseBtn" aria-label="Pausa">Ⅱ</button></div></div>
+ <div id="standings"></div><div id="miniWrap"><canvas id="minimap" width="320" height="240"></canvas><div id="minilabel">TRAIETTORIA / LIVE</div><div id="ghostStatus">GHOST · DOPO IL PRIMO GIRO</div></div>
+ <div id="toast" role="status"></div><div id="countdown"></div><div id="bottomInfo"></div>
+</div>
+<div id="mobileControls" class="hidden">
+ <div id="steerPad" class="control-pad">
+  <label for="touchSteer">← STERZO →</label>
+  <input id="touchSteer" type="range" min="-1" max="1" step=".01" value="0" aria-label="Sterzo a sinistra" aria-description="Trascina per piegare. Rilascia per ricentrare.">
+  <div id="steerStatus" role="status">Sensore in attesa · slider pronto</div>
+ </div>
+ <div id="drivePad" class="control-pad" role="slider" tabindex="0" aria-orientation="vertical" aria-label="Gas e freno a destra" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Neutro">
+  <div class="drive-caption gas-caption">GAS ↑<i><span id="gasFill"></span></i></div>
+  <div class="drive-rail"><div class="drive-center"></div><div id="driveKnob"></div></div>
+  <div class="drive-caption brake-caption"><i><span id="brakeFill"></span></i>↓ FRENO</div>
+ </div>
+</div>
+<div id="pause" class="modal hidden"><div class="dialog"><div class="eyebrow">PIT WALL</div><h2>Una pausa ai box.</h2><p id="pauseText">La gara è in pausa.</p><div class="actions"><button id="resume" class="primary">Riprendi</button><button id="pauseSettings">Impostazioni</button><button id="quit">Torna al menu</button></div></div></div>
+<div id="settings" class="modal hidden"><div class="dialog"><div class="eyebrow">SETUP</div><h2>Adatta la tua guida.</h2><label class="setting">Sensibilità sterzo<input id="sensitivity" type="range" min=".5" max="1.8" step=".05"></label><label class="setting">Curva risposta<input id="response" type="range" min=".7" max="2.2" step=".05"></label><label class="setting">Zona morta (gradi)<input id="deadzone" type="range" min="0" max="6" step=".2"></label><label class="setting">Inverti sensore<input id="invert" type="checkbox"></label><div class="sensor-setting"><button id="sensorSettingsOpen">Verifica sensore / calibra limiti</button><div id="sensorRangeSaved"></div></div><label class="setting">Ghost del miglior giro (anche in gara)<input id="ghostEnabled" type="checkbox"></label><label class="setting">Volume<input id="volume" type="range" min="0" max="1" step=".01"></label><label class="setting">Qualità<select id="quality"><option value="0">Bassa · prestazioni</option><option value="1">Media · bilanciata</option><option value="2">Alta · dettaglio</option></select></label><label class="setting">Traiettoria suggerita<input id="racingLine" type="checkbox"></label><p>La qualità modifica risoluzione e distanza visiva; il numero di oggetti si aggiorna alla prossima partenza. Sterzo: slider in basso a sinistra o rotazione del telefono. A destra trascina in alto per accelerare, in basso per frenare; il centro è neutro. Rilascia per azzerare.</p><div class="actions"><button id="settingsClose" class="primary">Salva impostazioni</button></div></div></div>
+<div id="sensorPanel" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sensorPanelTitle"><div class="dialog">
+ <div class="eyebrow">STERZO / SENSORE</div><h2 id="sensorPanelTitle">Verifica e calibrazione</h2>
+ <div class="sensor-layout"><div>
+  <div id="sensorLiveDegrees">—</div><div class="sensor-track"><i id="sensorDirection"></i></div>
+  <div id="sensorSourceLabel" class="sub">Nessuna lettura utilizzabile</div><p id="sensorCheckState" role="status">Verifica in corso…</p>
+  <div class="probe-row"><b>Movimento</b><span id="motionProbe">In attesa</span></div><div class="probe-row"><b>Orientamento</b><span id="orientationProbe">In attesa</span></div>
+  <button id="sensorProbe">Verifica / attiva</button>
+ </div><div>
+  <p id="sensorGuide">1. Memorizza il centro, poi ruota a sinistra e a destra fino ai limiti comodi.</p>
+  <button id="sensorCenter">1. Memorizza centro</button>
+  <div class="sensor-peaks"><div>SINISTRA<b id="sensorLeftPeak">0°</b></div><div>DESTRA<b id="sensorRightPeak">0°</b></div></div>
+  <button id="sensorSaveLimits" class="primary" disabled>2. Salva limiti</button>
+  <div id="sensorSavedRange" class="sub"></div><p class="sub">Servono almeno 8° per lato. La calibrazione resta salvata sul dispositivo.</p>
+ </div></div>
+ <div class="actions"><button id="sensorClose" class="primary">Chiudi</button><button id="sensorResetLimits">Ripristina limiti</button></div>
+</div></div>
+<div id="result" class="modal hidden"><div class="dialog"><div class="eyebrow">BANDIERA A SCACCHI</div><h2 id="resultTitle"></h2><p id="resultSummary"></p><div class="result-grid"><div id="resultStandings"></div><div><b>Tempi sul giro</b><div id="resultLaps"></div></div></div><div class="actions"><button id="again" class="primary">Corri ancora</button><button id="resultMenu">Menu</button></div></div></div>
+<div id="champModal" class="modal hidden"><div class="dialog"><div class="eyebrow">QUATTRO ROUND / UNA CORONA</div><h2>Campionato</h2><div id="champTable"></div><div class="actions"><button id="champClose" class="primary">Chiudi</button><button id="champReset">Nuovo campionato</button></div></div></div>
+<div id="rotate"><div><div style="font-size:55px">↻</div><b>Ruota il telefono</b><p>APEX GP si guida in orizzontale.</p></div></div>
+<div id="fatal" class="hidden"><h2>Il motore 3D non è disponibile.</h2><p id="fatalText"></p><button onclick="location.reload()">Riprova</button></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js" onerror="document.getElementById('fatal').classList.remove('hidden');document.getElementById('fatalText').textContent='Impossibile caricare Three.js da jsDelivr. Verifica la connessione e ricarica.'"></script>
+<script>
+'use strict';
+/* APEX GP — codice e asset procedurali originali, utilizzabili e modificabili.
+   Nessun modello, font, immagine o campione audio esterno.
+   Unica libreria: Three.js r160 (MIT), https://threejs.org/ e jsDelivr.
+   Build UMD scelta per non richiedere bundler né import map.
+   Fisica arcade con coordinate di Frenet; non simulazione professionale.
+*/
+(()=>{
+if(!window.THREE)return;
+// ==================== CONFIG / STATO / SALVATAGGI ====================
+const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,mod=(v,n)=>(v%n+n)%n,rad=Math.PI/180,angle=x=>Math.atan2(Math.sin(x),Math.cos(x));
+const damp=(a,b,k,dt)=>mix(a,b,1-Math.exp(-k*dt));
+const fmt=t=>Number.isFinite(t)?Math.floor(t/60)+':'+(t%60).toFixed(3).padStart(6,'0'):'—';
+const hex=c=>'#'+c.toString(16).padStart(6,'0');
+function readStore(){try{const a=JSON.parse(localStorage.getItem(CONFIG.storageKey)||'null');return a&&a.version===CONFIG.version?a:{version:CONFIG.version,records:{},champ:{},settings:{}}}catch{return{version:CONFIG.version,records:{},champ:{},settings:{}}}}
+let saved=readStore();saved.records=saved.records||{};saved.champ=saved.champ||{};saved.practiceGhosts=saved.practiceGhosts||{};
+let settings=Object.assign({sensitivity:CONFIG.input.sensitivity,response:CONFIG.input.response,dead:CONFIG.input.dead,invert:false,volume:CONFIG.audio.volume,quality:1,line:true,ghostEnabled:true,sensorLeftLimit:CONFIG.input.maxTilt,sensorRightLimit:CONFIG.input.maxTilt},saved.settings||{});
+let storageOK=true;function save(){try{saved.settings=settings;localStorage.setItem(CONFIG.storageKey,JSON.stringify(saved));storageOK=true}catch{storageOK=false;toast('Salvataggio indisponibile: record conservati solo in questa sessione.')}}
+let state='menu',beforePause='race',mode='race',bike=CONFIG.bikes[0],track,world,cockpit,ghost,ais=[],player,session,headRoll=0,shake=0,crashT=0,toastUntil=0,hudClock=0,accumulator=0,lastTime=0,countStage=-1;
+let choice={bike:0,track:0,difficulty:1,laps:3};
+let renderer;try{renderer=new THREE.WebGLRenderer({canvas:$('world'),antialias:true,alpha:false,powerPreference:'high-performance'})}catch(e){$('fatal').classList.remove('hidden');$('fatalText').textContent='WebGL non disponibile. Attiva l’accelerazione grafica del browser e ricarica la pagina.';return}
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(78,1,.035,3000);scene.add(camera);
+scene.add(new THREE.HemisphereLight(0xd1ebff,0x647243,2.3));const sun=new THREE.DirectionalLight(0xffe5b2,2.5);sun.position.set(-400,700,-200);scene.add(sun);
+const tmp=new THREE.Object3D(),V=THREE.Vector3;
+function material(color,extra={}){return new THREE.MeshStandardMaterial({color,roughness:.8,...extra})}
+function mesh(geo,mat,parent,pos,rot){const m=new THREE.Mesh(geo,mat);if(pos)m.position.set(...pos);if(rot)m.rotation.set(...rot);parent.add(m);return m}
+function box(parent,mat,size,pos,rot){return mesh(new THREE.BoxGeometry(...size),mat,parent,pos,rot)}
+function canvasTexture(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
+// PRNG deterministico: ambiente ripetibile, nessun file di asset.
+let seed=9127;function rng(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+function grain(base,amount){return canvasTexture(128,128,(c,w,h)=>{c.fillStyle=base;c.fillRect(0,0,w,h);for(let i=0;i<6500;i++){const v=rng()*255|0;c.fillStyle=`rgba(${v},${v},${v},${amount})`;c.fillRect(rng()*w,rng()*h,1+rng()*2,1+rng()*2)}})}
+const asphaltTex=grain('#40464a',.23);asphaltTex.wrapS=asphaltTex.wrapT=THREE.RepeatWrapping;asphaltTex.anisotropy=4;
+const gravelTex=grain('#b1a281',.4);gravelTex.wrapS=gravelTex.wrapT=THREE.RepeatWrapping;
+const grassTex=grain('#536a40',.24);grassTex.wrapS=grassTex.wrapT=THREE.RepeatWrapping;grassTex.repeat.set(200,200);
+function disposeGroup(g){if(!g)return;const geos=new Set(),mats=new Set(),textures=new Set();g.traverse(o=>{if(o.geometry)geos.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material]){mats.add(m);if(m.map&&! [asphaltTex,gravelTex,grassTex].includes(m.map))textures.add(m.map)}});geos.forEach(x=>x.dispose());mats.forEach(x=>x.dispose());textures.forEach(x=>x.dispose());g.removeFromParent()}
+// ==================== PISTE: spline chiusa, campionamento metrico, curvature ====================
+function makeTrack(cfg){
+ const raw=new THREE.CatmullRomCurve3(cfg.points.map(p=>new V(p[0],0,p[1])),true,'centripetal');raw.arcLengthDivisions=4000;raw.updateArcLengths();
+ const scale=cfg.length/raw.getLength(),center=new V();cfg.points.forEach(p=>center.add(new V(p[0],0,p[1])));center.divideScalar(cfg.points.length);
+ let curve=new THREE.CatmullRomCurve3(cfg.points.map(p=>new V((p[0]-center.x)*scale,0,(p[1]-center.z)*scale)),true,'centripetal');curve.arcLengthDivisions=6000;curve.updateArcLengths();
+ // Filtraggio metrico leggero: evita cuspidi da punti di controllo molto ravvicinati.
+ const count=Math.ceil(cfg.length/CONFIG.graphics.smoothingStep),smooth=[];for(let i=0;i<count;i++){const v=new V();let sum=0;for(let j=-CONFIG.graphics.smoothingRadius;j<=CONFIG.graphics.smoothingRadius;j++){const w=CONFIG.graphics.smoothingRadius+1-Math.abs(j);v.addScaledVector(curve.getPointAt(mod((i+j)/count,1)),w);sum+=w}smooth.push(v.divideScalar(sum))}curve=new THREE.CatmullRomCurve3(smooth,true,'centripetal');curve.arcLengthDivisions=6000;curve.updateArcLengths();const correction=cfg.length/curve.getLength();curve.points.forEach(p=>p.multiplyScalar(correction));curve.updateArcLengths();
+ const n=CONFIG.graphics.samples,L=curve.getLength(),pts=[],yaws=[],ks=[];
+ for(let i=0;i<n;i++){pts.push(curve.getPointAt(i/n));const t=curve.getTangentAt(i/n);yaws.push(Math.atan2(t.x,t.z))}
+ for(let i=0;i<n;i++)ks.push(-angle(yaws[(i+2)%n]-yaws[mod(i-2,n)])/(4*L/n));
+ const xs=pts.map(p=>p.x),zs=pts.map(p=>p.z),bounds={minX:Math.min(...xs),maxX:Math.max(...xs),minZ:Math.min(...zs),maxZ:Math.max(...zs)};
+ return{cfg,L,n,pts,yaws,ks,bounds,at(s){const f=mod(s,L)/L*n,i=Math.floor(f),j=(i+1)%n,t=f-i,yaw=yaws[i]+angle(yaws[j]-yaws[i])*t;return{x:mix(pts[i].x,pts[j].x,t),z:mix(pts[i].z,pts[j].z,t),yaw,k:mix(ks[i],ks[j],t),nx:-Math.cos(yaw),nz:Math.sin(yaw)}}};
+}
+function ribbon(a,b,y,mat,segments=CONFIG.graphics.roadSegments,colored=false){
+ const positions=[],uv=[],idx=[],colors=[];
+ for(let i=0;i<=segments;i++){const s=i/segments*track.L,p=track.at(s);for(const d of[a,b]){positions.push(p.x+p.nx*d,y,p.z+p.nz*d);uv.push((d-a)/4,s/10);if(colored){const c=new THREE.Color(Math.floor(s/4)%2?0xf1f0e9:0xd84d43);colors.push(c.r,c.g,c.b)}}if(i<segments){const k=i*2;idx.push(k,k+1,k+2,k+1,k+3,k+2)}}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));if(colored)geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setIndex(idx);geo.computeVertexNormals();return mesh(geo,mat,world);
+}
+function atObject(o,s,l=0,y=0){const p=track.at(s);o.position.set(p.x+p.nx*l,y,p.z+p.nz*l);o.rotation.y=p.yaw;return p}
+function instance(geo,mat,items){if(!items.length)return;const m=new THREE.InstancedMesh(geo,mat,items.length);items.forEach((v,i)=>{tmp.position.set(v.x,v.y,v.z);tmp.rotation.set(v.rx||0,v.yaw||0,v.rz||0);tmp.scale.set(v.sx||1,v.sy||1,v.sz||1);tmp.updateMatrix();m.setMatrixAt(i,tmp.matrix);if(v.color)m.setColorAt(i,new THREE.Color(v.color))});m.instanceMatrix.needsUpdate=true;m.computeBoundingSphere();world.add(m);return m}
+function signTexture(text,bg='#122a30',fg='#dcff52'){return canvasTexture(512,128,(c,w,h)=>{c.fillStyle=bg;c.fillRect(0,0,w,h);c.fillStyle=fg;c.font='italic 900 65px Arial';c.textAlign='center';c.fillText(text,w/2,88);c.fillRect(16,106,w-32,4)})}
+
+function batchStatic(root,excluded=[]){
+ root.updateMatrixWorld(true);const groups=new Map();root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||Array.isArray(o.material)||o.material.transparent||o.material.isShaderMaterial||excluded.includes(o.material))return;const key=o.material.uuid+'/'+Object.keys(o.geometry.attributes).sort().join(',');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(o)});
+ for(const objects of groups.values()){
+  if(objects.length<2)continue;const geos=objects.map(o=>o.geometry.clone().applyMatrix4(o.matrixWorld)),names=Object.keys(geos[0].attributes),geo=new THREE.BufferGeometry();let count=0;const index=[];
+  for(const g of geos){const ix=g.index;if(ix)for(let i=0;i<ix.count;i++)index.push(ix.getX(i)+count);else for(let i=0;i<g.attributes.position.count;i++)index.push(i+count);count+=g.attributes.position.count}
+  for(const name of names){const size=geos[0].attributes[name].itemSize,data=new Float32Array(count*size);let offset=0;for(const g of geos){data.set(g.attributes[name].array,offset);offset+=g.attributes[name].array.length}geo.setAttribute(name,new THREE.BufferAttribute(data,size))}
+  geo.setIndex(index);geo.computeBoundingSphere();mesh(geo,objects[0].material,root);for(const o of objects){o.removeFromParent();o.geometry.dispose()}geos.forEach(g=>g.dispose());
+ }
+}
+
+// ==================== INIZIO CURVE E RIFERIMENTI METRICI DI FRENATA ====================
+function findCurveEntries(t){
+ const cfg=CONFIG.braking,step=t.L/t.n;
+ // Parte dal tratto più rettilineo: anche una curva che attraversa s=0 resta intera.
+ let anchor=0;for(let i=1;i<t.n;i++)if(Math.abs(t.ks[i])<Math.abs(t.ks[anchor]))anchor=i;
+ const curves=[];let run=null;
+ function finish(){
+  if(!run)return;
+  if(run.heading>=cfg.minTurnDegrees*rad&&(run.end-run.start)*step>=cfg.minLength){
+   curves.push({entryS:mod(run.start*step,t.L),endS:mod(run.end*step,t.L),direction:run.direction,heading:run.heading,peak:run.peak});
+  }
+  run=null;
+ }
+ for(let j=anchor;j<=anchor+t.n;j++){
+  const k=t.ks[j%t.n],sign=Math.sign(k),abs=Math.abs(k);
+  if(run&&(sign!==run.direction||abs<cfg.exitCurvature))finish();
+  if(!run&&j<anchor+t.n&&abs>=cfg.enterCurvature){
+   let start=j;
+   for(let b=j-1;b>=Math.max(anchor,j-Math.ceil(100/step));b--){const v=t.ks[mod(b,t.n)];if(Math.sign(v)!==sign||Math.abs(v)<cfg.exitCurvature)break;start=b}
+   run={start,end:j,direction:sign,heading:0,peak:abs};
+   for(let b=start;b<j;b++)run.heading+=Math.abs(t.ks[mod(b,t.n)])*step;
+  }
+  if(run){run.end=j+1;run.heading+=abs*step;run.peak=Math.max(run.peak,abs)}
+ }
+ finish();return curves.sort((a,b)=>a.entryS-b.entryS).map((c,i)=>({...c,id:i+1}));
+}
+function buildBrakingBoards(){
+ const cfg=CONFIG.braking,half=CONFIG.graphics.width/2;
+ track.curves=findCurveEntries(track);track.brakeMarkers=[];
+ const white=material(0xf5f5ef,{roughness:.9}),post=material(0x626e70),faces={};
+ for(const distance of cfg.distances){
+  const texture=canvasTexture(256,224,(c,w,h)=>{
+   c.fillStyle='#fafaf3';c.fillRect(0,0,w,h);c.strokeStyle='#152023';c.lineWidth=7;c.strokeRect(5,5,w-10,h-10);
+   c.fillStyle='#111c20';c.textAlign='center';c.font='900 126px Arial';c.fillText(distance,w/2,153);c.font='700 26px Arial';c.fillText('m',w/2,199);
+  });
+  faces[distance]=new THREE.MeshBasicMaterial({map:texture});
+ }
+ for(const curve of track.curves)for(const distance of cfg.distances){
+  const s=mod(curve.entryS-distance,track.L),p=track.at(s);
+  for(const side of[-1,1]){
+   const lateral=side*(half+cfg.boardOffset),x=p.x+p.nx*lateral,z=p.z+p.nz*lateral;
+   // Non collocare un riferimento sull'asfalto di un altro ramo vicino.
+   let clear=true;for(let i=0;i<track.n;i+=4){const q=track.pts[i];if((q.x-x)**2+(q.z-z)**2<(half+cfg.roadClearance)**2){clear=false;break}}
+   if(!clear)continue;
+   const g=new THREE.Group();atObject(g,s,lateral);world.add(g);
+   box(g,white,[cfg.width,cfg.height,.28],[0,cfg.height/2+.3,0]);
+   box(g,post,[.12,.55,.12],[0,.275,0]);
+   // La faccia guarda chi arriva: -Z nel riferimento tangente locale.
+   mesh(new THREE.PlaneGeometry(cfg.width-.08,cfg.height-.08),faces[distance],g,[0,cfg.height/2+.3,-.15],[0,Math.PI,0]);
+   track.brakeMarkers.push({curveId:curve.id,entryS:curve.entryS,distance,s,side,lateral});
+  }
+ }
+}
+
+let racingLine,sky;
+function buildWorld(){
+ disposeGroup(world);world=new THREE.Group();scene.add(world);seed=9127+choice.track*87;
+ const q=CONFIG.graphics.quality[settings.quality],half=CONFIG.graphics.width/2;
+ scene.background=new THREE.Color(0xadc8cf);scene.fog=new THREE.Fog(0xadc8cf,q.far*.37,q.far);
+ // Cielo sfumato procedurale, senza HDRI.
+ sky=mesh(new THREE.SphereGeometry(1,24,12),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x3a8bb0)},bottom:{value:new THREE.Color(0xdfd8bc)}},vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 p;uniform vec3 top;uniform vec3 bottom;void main(){gl_FragColor=vec4(mix(bottom,top,pow(max(normalize(p).y,0.),.55)),1.);}'}),world);sky.scale.setScalar(q.far*.94);
+ mesh(new THREE.PlaneGeometry(18000,18000),material(track.cfg.theme==='dry'?0x8c8a58:0x82965c,{map:grassTex}),world,[0,-.07,0],[-Math.PI/2,0,0]);
+ if(track.cfg.theme==='ocean'){mesh(new THREE.PlaneGeometry(12000,4000),material(0x3b91a3,{roughness:.25}),world,[0,-.08,track.bounds.maxZ+2200],[-Math.PI/2,0,0])}
+ ribbon(-half-CONFIG.graphics.runoff,half+CONFIG.graphics.runoff,-.015,material(0xc4ad82,{map:gravelTex,side:THREE.DoubleSide}));
+ ribbon(-half,half,.012,material(0xffffff,{map:asphaltTex,side:THREE.DoubleSide}));
+ const curbMat=material(0xffffff,{vertexColors:true,side:THREE.DoubleSide});ribbon(-half-CONFIG.lapRules.curbWidth,-half,.025,curbMat,1800,true);ribbon(half,half+CONFIG.lapRules.curbWidth,.025,curbMat,1800,true);
+ ribbon(-half+.15,-half+.3,.03,material(0xe2e5dc));ribbon(half-.3,half-.15,.03,material(0xe2e5dc));
+ const barriers=[],posts=[],fences=[],trees=[],trunks=[],mountains=[];
+ for(let s=0;s<track.L;s+=9){const p=track.at(s);for(const side of[-1,1]){const d=CONFIG.graphics.barrier*side;barriers.push({x:p.x+p.nx*d,y:.55,z:p.z+p.nz*d,yaw:p.yaw,color:Math.floor(s/70)%2?'#c6d2d0':'#3d555b'});if(Math.floor(s/9)%3===0){posts.push({x:p.x+p.nx*(d+side),y:2,z:p.z+p.nz*(d+side)});fences.push({x:p.x+p.nx*(d+side),y:2,z:p.z+p.nz*(d+side),yaw:p.yaw})}}}
+ instance(new THREE.BoxGeometry(.65,1.1,9.1),material(0xffffff),barriers);instance(new THREE.CylinderGeometry(.07,.07,3,5),material(0x72848a),posts);instance(new THREE.BoxGeometry(.035,2.3,27),material(0x839ea3,{transparent:true,opacity:.23}),fences);
+ // Collocazione degli oggetti con distanza dalla pista per evitare ostacoli sul tracciato.
+ function nearRoad(x,z,min){for(let j=0;j<track.n;j+=8){const p=track.pts[j];if((p.x-x)**2+(p.z-z)**2<min*min)return true}return false}
+ const b=track.bounds;
+ for(let i=0;i<q.trees;i++){const x=mix(b.minX-350,b.maxX+350,rng()),z=mix(b.minZ-350,b.maxZ+350,rng());if(nearRoad(x,z,48))continue;const h=6+rng()*10;trees.push({x,y:h*.55,z,sx:h*.35,sy:h*.6,sz:h*.35,color:rng()>.5?'#456746':'#638351'});trunks.push({x,y:h*.22,z,sy:h*.45})}
+ instance(new THREE.ConeGeometry(1,2,6),material(0xffffff),trees);instance(new THREE.CylinderGeometry(.35,.5,1,5),material(0x6b5a45),trunks);
+ for(let i=0;i<28;i++){const a=i/28*Math.PI*2,d=2100+rng()*1800;mountains.push({x:Math.sin(a)*d,y:-10,z:Math.cos(a)*d,sx:400+rng()*500,sy:160+rng()*250,sz:380+rng()*400,color:track.cfg.theme==='dry'?'#9c9b7a':'#7e9585'})}instance(new THREE.ConeGeometry(1,1,7),material(0xffffff),mountains);
+ const architecture=material(0xc5ced0),dark=material(0x283f48),seats=material(0x586e78);const crowd=[];
+ for(let k=0;k<7;k++){
+  const s=k*track.L/7+28,side=k%2?-1:1,g=new THREE.Group();atObject(g,s,side*48);world.add(g);if(side<0)g.rotation.y+=Math.PI;
+  for(let r=0;r<5;r++)box(g,seats,[12,.8,1.8],[0,r*.8+1,r*1.8]);box(g,dark,[14,.35,12],[0,7.1,4]);for(const x of[-6,6])box(g,architecture,[.25,7,.25],[x,3.5,7]);
+  g.updateMatrixWorld(true);for(let n=0;n<Math.floor(q.crowd/7);n++){const p=new V((rng()-.5)*11,1.7+(n%5)*.8,(n%5)*1.8).applyMatrix4(g.matrixWorld);crowd.push({x:p.x,y:p.y,z:p.z,color:['#ef7560','#e9d495','#82b2b9','#37395a'][n%4]})}
+ }
+ instance(new THREE.BoxGeometry(.35,.7,.32),material(0xffffff),crowd);
+ for(let k=0;k<16;k++){const p=track.at(k*track.L/16+65),g=new THREE.Group();atObject(g,k*track.L/16+65,(k%2?-1:1)*29,2.7);world.add(g);const m=new THREE.MeshBasicMaterial({map:signTexture(['APEX // GP','KAZE RACING','VELORA','ORIX LAB'][k%4]),side:THREE.DoubleSide});box(g,m,[9,2.2,.15],[0,0,0]);}
+ // Box e portale di partenza, griglia e linea a scacchi.
+ const pit=new THREE.Group();atObject(pit,45,-21);world.add(pit);box(pit,architecture,[13,7,105],[0,3.5,0]);box(pit,dark,[13.2,2,106],[0,5.4,0]);for(let i=0;i<12;i++)box(pit,dark,[.07,3,5.8],[6.55,1.6,-48+i*8.2]);
+ for(let row=0;row<2;row++)for(let col=0;col<16;col++){const t=new THREE.Group();atObject(t,row*.55,(col-7.5)*.95,.05);world.add(t);box(t,material((col+row)%2?0xeeeeeb:0x172328),[.95,.02,.55],[0,0,0]);}
+ for(let i=0;i<12;i++){const g=new THREE.Group();atObject(g,-5-Math.floor(i/3)*8,(i%3-1)*3.7,.05);world.add(g);for(const x of[-.7,.7])box(g,material(0xd5dcd5),[.06,.015,2],[x,0,0]);}
+ const gate=new THREE.Group();atObject(gate,12,0);world.add(gate);for(const x of[-10,10])box(gate,dark,[.45,7,.45],[x,3.5,0]);box(gate,dark,[21,1.1,.8],[0,7,0]);box(gate,new THREE.MeshBasicMaterial({map:signTexture('APEX // GP'),side:THREE.DoubleSide}),[9,.95,.85],[-4.6,7,-.01]);
+ sessionLights=[];for(let i=0;i<5;i++){const m=material(0x2b1418,{emissive:0x120000});mesh(new THREE.SphereGeometry(.28,12,8),m,gate,[2.4+i*1.05,6.95,-.48]);sessionLights.push(m)}
+ // Traiettoria indicativa a punti (verde/giallo/rosso secondo velocità consigliata).
+ const dots=[];for(let s=0;s<track.L;s+=12){const p=track.at(s);dots.push({x:p.x,y:.052,z:p.z,yaw:p.yaw,color:Math.abs(p.k)>.016?'#f87656':Math.abs(p.k)>.006?'#e6dd62':'#73bfb2'})}
+ racingLine=instance(new THREE.BoxGeometry(.14,.01,2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55}),dots);racingLine.visible=settings.line;buildBrakingBoards();batchStatic(world,sessionLights);
+}
+let sessionLights=[];
+// ==================== MOTO / COCKPIT: tutte le geometrie originali ====================
+function makeBike(color,number=0,isGhost=false){
+ const root=new THREE.Group(),lean=new THREE.Group();root.add(lean);root.userData.lean=lean;
+ const paint=material(color,{metalness:.25,roughness:.35,transparent:isGhost,opacity:isGhost?.32:1,depthWrite:!isGhost}),black=material(0x10171b,{transparent:isGhost,opacity:isGhost?.3:1,depthWrite:!isGhost}),metal=material(0x9aabae,{metalness:.65,roughness:.25,transparent:isGhost,opacity:isGhost?.22:1,depthWrite:!isGhost});
+ if(!isGhost){const shadow=mesh(new THREE.CircleGeometry(.9,16),new THREE.MeshBasicMaterial({color:0x101b20,transparent:true,opacity:.19,depthWrite:false}),root,[0,.045,0],[-Math.PI/2,0,0]);shadow.scale.set(.5,1.3,1)}
+ const wheels=[];for(const z of[-.72,.73]){const wheel=mesh(new THREE.TorusGeometry(.31,.095,6,16),black,lean,[0,.34,z],[0,Math.PI/2,0]);wheels.push(wheel);mesh(new THREE.CylinderGeometry(.23,.23,.055,12),metal,lean,[0,.34,z],[0,0,Math.PI/2])}
+ const body=mesh(new THREE.SphereGeometry(1,12,8),paint,lean,[0,.73,.13]);body.scale.set(.29,.48,.77);box(lean,black,[.36,.14,.58],[0,.91,-.48]);box(lean,paint,[.29,.16,.43],[0,1.01,-.66]);
+ for(const side of[-1,1]){box(lean,metal,[.045,.58,.05],[side*.15,.57,.62],[-.2,0,0]);box(lean,metal,[.06,.06,1.14],[side*.12,.45,-.05],[.18,0,0]);mesh(new THREE.CylinderGeometry(.065,.085,.68,8),metal,lean,[side*.25,.43,-.52],[Math.PI/2,0,0])}
+ mesh(new THREE.SphereGeometry(.19,10,8),paint,lean,[0,1.39,.15]);const rider=mesh(new THREE.CapsuleGeometry(.2,.47,3,8),black,lean,[0,1.1,-.2],[-.75,0,0]);rider.scale.z=.8;
+ if(!isGhost){const num=canvasTexture(64,64,(c)=>{c.fillStyle=hex(color);c.fillRect(0,0,64,64);c.fillStyle='#101719';c.font='900 40px Arial';c.textAlign='center';c.fillText(number,32,46)});mesh(new THREE.PlaneGeometry(.33,.31),new THREE.MeshBasicMaterial({map:num,side:THREE.DoubleSide}),lean,[0,.94,.77],[-.2,0,0]);}
+ batchStatic(lean);root.userData.wheels=[];return root;
+}
+let dashCanvas,dashCtx,dashTex,dashNeedle,cockpitRoll,gloveLeft,gloveRight;
+function buildCockpit(){
+ disposeGroup(cockpit);cockpit=new THREE.Group();camera.add(cockpit);cockpitRoll=new THREE.Group();cockpit.add(cockpitRoll);
+ const carbon=material(0x17212a,{roughness:.35,metalness:.3}),silver=material(0xaab5b6,{metalness:.8,roughness:.25}),paint=material(bike.color,{metalness:.4,roughness:.25}),rubber=material(0x10171d,{roughness:.87});
+ box(cockpitRoll,carbon,[.57,.26,.065],[0,-.27,-.64],[.16,0,0]);
+ dashCanvas=document.createElement('canvas');dashCanvas.width=768;dashCanvas.height=336;dashCtx=dashCanvas.getContext('2d');dashTex=new THREE.CanvasTexture(dashCanvas);dashTex.colorSpace=THREE.SRGBColorSpace;
+ mesh(new THREE.PlaneGeometry(.53,.232),new THREE.MeshBasicMaterial({map:dashTex,toneMapped:false}),cockpitRoll,[0,-.263,-.60],[.16,0,0]);
+ // Serbatoio e spalle della carena; guanti con protezioni nocche e dita avvolte.
+ const tank=mesh(new THREE.SphereGeometry(1,20,12),paint,cockpitRoll,[0,-.78,-.12]);tank.scale.set(.40,.39,.59);
+ mesh(new THREE.CylinderGeometry(.067,.067,.012,16),silver,cockpitRoll,[0,-.405,-.21]);
+ box(cockpitRoll,silver,[.61,.035,.1],[0,-.42,-.46]);
+ for(const side of[-1,1]){
+  box(cockpitRoll,carbon,[.12,.48,.48],[side*.53,-.49,-.71],[0,side*.3,side*.4]);
+  mesh(new THREE.CylinderGeometry(.035,.035,.23,10),rubber,cockpitRoll,[side*.39,-.38,-.40],[0,0,Math.PI/2+side*.12]);
+  mesh(new THREE.CylinderGeometry(.021,.021,.20,8),silver,cockpitRoll,[side*.40,-.347,-.50],[0,0,Math.PI/2]);
+  const glove=new THREE.Group();glove.position.set(side*.40,-.395,-.39);cockpitRoll.add(glove);const g=mesh(new THREE.SphereGeometry(1,12,8),rubber,glove);g.scale.set(.095,.065,.12);box(glove,paint,[.115,.024,.075],[0,.055,-.005],[.1,0,side*.1]);
+  for(let f=0;f<4;f++)mesh(new THREE.CapsuleGeometry(.017,.05,2,5),rubber,glove,[(f-1.5)*.035,-.024,-.083],[1.3,0,0]);
+  const sleeve=mesh(new THREE.CapsuleGeometry(.065,.4,3,8),carbon,glove,[side*.065,-.13,.18],[.85,0,-side*.25]);
+  if(side<0)gloveLeft=glove;else gloveRight=glove;
+  box(cockpitRoll,silver,[.075,.025,.08],[side*.25,-.40,-.43]);
+ }
+ // Cupolino trasparente a superficie curva: bordi visibili senza oscurare la pista.
+ const verts=[],indices=[],rows=9,cols=28;
+ for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){const a=(i/cols-.5)*2.6,r=.57;verts.push(Math.sin(a)*r,-.30+j/rows*.56,-.89-Math.cos(a)*(.13+j/rows*.18))}
+ for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const k=j*(cols+1)+i;indices.push(k,k+1,k+cols+1,k+1,k+cols+2,k+cols+1)}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();mesh(geo,new THREE.MeshBasicMaterial({color:0xb9e2df,transparent:true,opacity:.065,side:THREE.DoubleSide,depthWrite:false}),cockpitRoll);
+ const rim=[];for(let i=0;i<=cols;i++){const a=(i/cols-.5)*2.6;rim.push(new V(Math.sin(a)*.57,.26,-.89-Math.cos(a)*.31))}mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim),32,.004,4,false),silver,cockpitRoll);
+ cockpit.traverse(o=>{if(o.isMesh)o.frustumCulled=false});drawDash();
+}
+function drawDash(){
+ if(!dashCtx)return;const p=player||{v:0,rpm:bike.idle,gear:1,lean:0},c=dashCtx,w=768,h=336;
+ c.fillStyle='#081115';c.fillRect(0,0,w,h);c.strokeStyle='#3c5159';c.lineWidth=2;c.strokeRect(5,5,w-10,h-10);
+ const cx=161,cy=174,r=123,start=Math.PI*.75,end=Math.PI*2.25;
+ c.lineWidth=15;c.strokeStyle='#30474c';c.beginPath();c.arc(cx,cy,r,start,end);c.stroke();c.strokeStyle='#ff5e52';c.beginPath();c.arc(cx,cy,r,mix(start,end,.84),end);c.stroke();
+ for(let i=0;i<=14;i++){const a=mix(start,end,i/14);c.strokeStyle=i>=12?'#ff655a':'#dbe5df';c.lineWidth=i%2?2:3;c.beginPath();c.moveTo(cx+Math.cos(a)*(r-14),cy+Math.sin(a)*(r-14));c.lineTo(cx+Math.cos(a)*(r-3),cy+Math.sin(a)*(r-3));c.stroke();if(i%2===0){c.fillStyle='#dbe5df';c.font='19px monospace';c.textAlign='center';c.fillText(Math.round(i/14*bike.maxRPM/1000),cx+Math.cos(a)*(r-38),cy+Math.sin(a)*(r-38)+6)}}
+ const a=mix(start,end,clamp(p.rpm/bike.maxRPM,0,1));c.strokeStyle='#dcff52';c.lineWidth=5;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*100,cy+Math.sin(a)*100);c.stroke();c.fillStyle='#dcff52';c.beginPath();c.arc(cx,cy,9,0,7);c.fill();c.fillStyle='#abc0bf';c.font='14px monospace';c.fillText('RPM × 1000',cx,cy+54);
+ c.textAlign='center';for(let i=0;i<10;i++){c.fillStyle=p.rpm/bike.shift>.66+i*.034?(i>6?'#ff655a':i>3?'#dcff52':'#6be9de'):'#26373c';c.beginPath();c.arc(334+i*38,29,9,0,7);c.fill()}
+ c.textAlign='right';c.fillStyle='#f0f6ed';c.font='900 96px monospace';c.fillText(Math.round(p.v*3.6),602,146);c.font='17px monospace';c.fillStyle='#9cb8ba';c.fillText('km/h',602,176);
+ c.fillStyle='#dcff52';c.font='900 83px monospace';c.fillText(p.gear,729,147);c.font='15px monospace';c.fillStyle='#9cb8ba';c.fillText('GEAR',728,178);
+ c.fillStyle='#293b42';c.fillRect(315,191,425,2);c.textAlign='left';c.font='19px monospace';c.fillStyle='#72e2dc';c.fillText('LEAN '+Math.abs(p.lean/rad).toFixed(0)+'°',322,224);c.fillStyle='#cbdcd6';c.fillText('LAP '+(session?Math.min(choice.laps,Math.floor(Math.max(0,p.s)/track.L)+1):1)+'/'+choice.laps,558,224);
+ c.fillStyle='#f0f6ed';c.font='27px monospace';c.fillText(session?fmt(session.time-session.lapStart):'0:00.000',322,266);c.font='17px monospace';c.fillStyle='#a5babc';c.fillText(session?'POS '+rankPlayer()+'/'+(mode==='time'?1:12):bike.name,555,263);
+ c.fillStyle='#829b9d';c.font='15px monospace';c.fillText(bike.name+' / AUTO',322,310);c.fillStyle=session&&session.invalid?'#ff8171':'#dcff52';c.fillText(session&&session.invalid?'GIRO NON VALIDO':'RACE SYSTEMS OK',24,314);dashTex.needsUpdate=true;
+}
+// ==================== INPUT: sensori ridondanti e comandi ai bordi ====================
+const input={
+ keys:{},pointers:new Map(),raw:0,center:0,filtered:0,lastSensor:0,
+ autoCenter:true,touchSteer:0,touchSteerActive:false,drive:0,
+ throttle:0,brake:0,permission:'idle',sensorSource:'',sensorDegrees:0,
+ motion:null,orientation:null,centers:{motion:null,orientation:null,quaternion:null}
+};
+const relativeSensorQ=new THREE.Quaternion();
+function screenAngle(){
+ if(screen.orientation&&Number.isFinite(screen.orientation.angle))return screen.orientation.angle*rad;
+ if(typeof window.orientation==='number')return window.orientation*rad;
+ return screen.orientation?.type==='landscape-secondary'?-Math.PI/2:innerWidth>innerHeight?Math.PI/2:0;
+}
+function gravitySample(x,y,z){
+ const a=screenAngle(),gx=x*Math.cos(a)+y*Math.sin(a),gy=y*Math.cos(a)-x*Math.sin(a);
+ return{raw:Math.atan2(gx,-gy),projection:Math.hypot(gx,gy),z,time:performance.now()};
+}
+function rememberCenter(){
+ const now=performance.now(),fresh=s=>s&&now-s.time<CONFIG.input.sensorTimeout;
+ input.centers.motion=fresh(input.motion)&&input.motion.projection>=CONFIG.input.minGravityProjection?input.motion.raw:null;
+ input.centers.orientation=fresh(input.orientation)&&input.orientation.projection>=CONFIG.input.minGravityProjection?input.orientation.raw:null;
+ input.centers.quaternion=fresh(input.orientation)?input.orientation.q.clone():null;
+ input.filtered=0;input.sensorDegrees=0;input.autoCenter=false;
+}
+window.addEventListener('devicemotion',e=>{
+ const g=e.accelerationIncludingGravity;
+ // Alcuni browser non forniscono z: gli assi x/y restano utilizzabili.
+ if(!g||!Number.isFinite(g.x)||!Number.isFinite(g.y))return;
+ input.motion=gravitySample(g.x,g.y,Number.isFinite(g.z)?g.z:0);input.motionEvents=(input.motionEvents||0)+1;
+},{passive:true});
+window.addEventListener('deviceorientation',e=>{
+ if(!Number.isFinite(e.beta)||!Number.isFinite(e.gamma))return;
+ const beta=e.beta*rad,gamma=e.gamma*rad;
+ // Rz(alpha) * Rx(beta) * Ry(gamma): convenzione W3C Device Orientation.
+ const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(beta,gamma,(Number.isFinite(e.alpha)?e.alpha:0)*rad,'ZXY'));
+ input.orientation={...gravitySample(-Math.cos(beta)*Math.sin(gamma)*9.81,Math.sin(beta)*9.81,Math.cos(beta)*Math.cos(gamma)*9.81),q,hasHeading:Number.isFinite(e.alpha)};
+ input.orientationEvents=(input.orientationEvents||0)+1;
+},{passive:true});
+function sensorReading(){
+ const now=performance.now(),fresh=s=>s&&now-s.time<CONFIG.input.sensorTimeout;
+ if(input.autoCenter)rememberCenter();
+ let sample,source,degrees=0;
+ // Gravità preferita; orientamento come fallback se motion manca o è inutilizzabile.
+ if(fresh(input.motion)&&input.motion.projection>=CONFIG.input.minGravityProjection){
+  sample=input.motion;source='motion';
+ }else if(fresh(input.orientation)&&input.orientation.projection>=CONFIG.input.minGravityProjection){
+  sample=input.orientation;source='orientation';
+ }
+ if(sample){
+  if(input.centers[source]===null)input.centers[source]=sample.raw;
+  degrees=angle(sample.raw-input.centers[source])/rad;
+  input.raw=sample.raw;input.center=input.centers[source];
+ }else if(fresh(input.orientation)&&input.orientation.hasHeading){
+  // Quasi piatto, la gravità non osserva la rotazione intorno allo schermo.
+  // Usa il twist relativo del quaternione, centrato sul gesto di calibrazione.
+  sample=input.orientation;source='orientation';
+  if(!input.centers.quaternion)input.centers.quaternion=sample.q.clone();
+  relativeSensorQ.copy(input.centers.quaternion).invert().multiply(sample.q);
+  degrees=-angle(2*Math.atan2(relativeSensorQ.z,relativeSensorQ.w))/rad;
+ }
+ input.sensorSource=source||'';input.sensorDegrees=sample?degrees:0;
+ if(sample){input.lastSensor=sample.time;input.permission='granted'}
+ return{alive:!!sample,degrees};
+}
+function sensorMessage(alive){
+ if(alive)return'Sensore attivo · '+(input.sensorDegrees>=0?'+':'')+input.sensorDegrees.toFixed(0)+'°';
+ if(!window.isSecureContext)return'Sensore: apri il gioco da HTTPS';
+ if(input.permission==='denied')return'Sensore: permesso negato · usa lo slider';
+ return'Sensore non disponibile · usa lo slider';
+}
+function refreshSensorStatus(){
+ const r=sensorReading();$('steerStatus').textContent=sensorMessage(r.alive);
+ $('calibrateBtn').textContent=r.alive?'Sensore / calibra':'Verifica sensore';
+ return r;
+}
+function calibrate(){
+ rememberCenter();const r=refreshSensorStatus();
+ toast(r.alive?'Centro ricalibrato':sensorMessage(false));
+}
+async function requestSensorPermissions(){
+ // Avvia entrambe le richieste nel gesto utente, senza await intermedio (iOS).
+ const jobs=[];
+ for(const name of['DeviceMotionEvent','DeviceOrientationEvent']){
+  const T=window[name];
+  if(T&&typeof T.requestPermission==='function'){
+   try{jobs.push(T.requestPermission().then(r=>({name,r})).catch(()=>({name,r:'denied'})))}
+   catch{jobs.push(Promise.resolve({name,r:'denied'}))}
+  }
+ }
+ const results=await Promise.all(jobs);
+ input.permission=results.length&&results.every(x=>x.r!=='granted')?'denied':'waiting';
+ input.autoCenter=true;refreshSensorStatus();
+}
+async function enableDevice(){
+ const permissions=requestSensorPermissions();
+ const audioReady=audio.init().catch(()=>toast('Audio non disponibile in questo browser.'));
+ let fs;try{fs=document.documentElement.requestFullscreen?.();if(fs?.catch)fs.catch(()=>{})}catch{}
+ await permissions;try{await fs;await screen.orientation?.lock?.('landscape')}catch{}
+ await audioReady;input.autoCenter=true;
+}
+function clearInput(){
+ input.pointers.clear();input.keys={};input.drive=0;input.throttle=0;input.brake=0;
+ input.touchSteer=0;input.touchSteerActive=false;$('touchSteer').value=0;
+}
+function updateControlVisibility(){
+ $('mobileControls').classList.toggle('hidden',!['race','countdown'].includes(state));
+}
+const touch=$('touch'),drivePad=$('drivePad'),steerSlider=$('touchSteer');
+function pointerControlStart(e,role,absolute=false){
+ if(!['race','countdown'].includes(state))return;
+ if([...input.pointers.values()].some(p=>p.role===role))return;
+ if(role==='steer'&&input.touchSteerActive)return;
+ e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);
+ let neutral=e.clientY,travel=CONFIG.input.driveTravel;
+ if(absolute){const r=drivePad.getBoundingClientRect();neutral=r.top+r.height/2;travel=Math.max(24,r.height/2-28)}
+ const p={role,startX:e.clientX,neutral,travel,absolute,value:0};
+ input.pointers.set(e.pointerId,p);
+ if(role==='steer'){input.touchSteerActive=true;input.touchSteer=0}
+ pointerControlMove(e);
+}
+function pointerControlMove(e){
+ const p=input.pointers.get(e.pointerId);if(!p)return;e.preventDefault();
+ if(p.role==='drive'){
+  p.value=clamp((p.neutral-e.clientY)/p.travel,-1,1);
+  input.drive=Math.abs(p.value)<CONFIG.input.driveDead?0:p.value;
+ }else{
+  input.touchSteer=clamp((e.clientX-p.startX)/CONFIG.input.steerTravel,-1,1);
+  steerSlider.value=input.touchSteer;
+ }
+}
+function pointerControlEnd(e){
+ const p=input.pointers.get(e.pointerId);if(!p)return;
+ input.pointers.delete(e.pointerId);
+ if(p.role==='drive')input.drive=0;
+ else{input.touchSteerActive=false;input.touchSteer=0;steerSlider.value=0}
+}
+touch.addEventListener('pointerdown',e=>pointerControlStart(e,e.clientX<innerWidth/2?'steer':'drive'));
+drivePad.addEventListener('pointerdown',e=>pointerControlStart(e,'drive',true));
+for(const target of[touch,drivePad]){
+ target.addEventListener('pointermove',pointerControlMove);
+ for(const event of['pointerup','pointercancel','lostpointercapture'])target.addEventListener(event,pointerControlEnd);
+ target.addEventListener('contextmenu',e=>e.preventDefault());
+}
+steerSlider.addEventListener('pointerdown',e=>{
+ if(!['race','countdown'].includes(state))return;
+ input.touchSteerActive=true;steerSlider.setPointerCapture(e.pointerId);
+});
+steerSlider.addEventListener('input',e=>{input.touchSteerActive=true;input.touchSteer=+e.target.value});
+function releaseSteering(){input.touchSteerActive=false;input.touchSteer=0;steerSlider.value=0}
+for(const ev of['pointerup','pointercancel','lostpointercapture','blur'])steerSlider.addEventListener(ev,releaseSteering);
+// Accessibilità: stesso asse firmato per mouse/tastiera sul comando verticale.
+drivePad.addEventListener('keydown',e=>{
+ if(e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='Space'){
+  e.preventDefault();e.stopPropagation();input.drive=e.code==='ArrowUp'?1:e.code==='ArrowDown'?-1:0;
+ }
+});
+drivePad.addEventListener('keyup',e=>{if(['ArrowUp','ArrowDown','Space'].includes(e.code)){e.stopPropagation();input.drive=0}});
+drivePad.addEventListener('blur',()=>{input.drive=0});
+window.addEventListener('keydown',e=>{
+ if(e.target.matches('select,input'))return;
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)&&state!=='menu')e.preventDefault();
+ if(e.repeat)return;
+ input.keys[e.code]=true;
+ if(e.code==='KeyP'||e.code==='Escape'){if(state==='pause')resume();else if(state==='race'||state==='countdown')pauseGame()}
+ if(e.code==='KeyC')calibrate();
+});
+window.addEventListener('keyup',e=>delete input.keys[e.code]);
+window.addEventListener('blur',()=>{clearInput();if(state==='race'||state==='countdown')pauseGame('Finestra non attiva. Tocca Riprendi per tornare in pista.')});
+function orientationChanged(){if(sensorPanel.open){sensorPanel.capture=false;$('sensorGuide').textContent='Orientamento cambiato: memorizza nuovamente il centro.'}input.motion=null;input.orientation=null;input.autoCenter=true;clearInput()}
+window.addEventListener('orientationchange',orientationChanged);
+screen.orientation?.addEventListener?.('change',orientationChanged);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(state==='race'||state==='countdown'))pauseGame('Gara sospesa mentre eri in un’altra app.')});
+function getControls(dt){
+ const reading=sensorReading();let target=0;
+ if(reading.alive)target=sensorControlValue(reading.degrees);
+ input.filtered=damp(input.filtered,target,CONFIG.input.filter,dt);
+ const k=input.keys,left=k.ArrowLeft||k.KeyA,right=k.ArrowRight||k.KeyD;
+ // Anche il valore zero dello slider prevale sul sensore mentre il dito è appoggiato.
+ const steer=left||right?Number(!!right)-Number(!!left):input.touchSteerActive?input.touchSteer:input.filtered;
+ const drive=clamp(input.drive,-1,1),keyBrake=k.ArrowDown||k.KeyS||k.Space;
+ let gas=k.ArrowUp||k.KeyW?1:Math.max(0,drive),brake=keyBrake?1:Math.max(0,-drive);
+ // Un unico asse destra: freno e acceleratore non si sommano. Cambio segno immediato.
+ if(brake>0){gas=0;input.throttle=0}else if(gas>0)input.brake=0;
+ input.throttle=damp(input.throttle,gas,gas?CONFIG.input.driveAttack:CONFIG.input.driveRelease,dt);
+ input.brake=damp(input.brake,brake,CONFIG.input.driveRelease,dt);
+ updateControlVisibility();
+ return{steer:clamp(steer,-1,1),gas:input.throttle,brake:input.brake};
+}
+// ==================== VERIFICA SENSORE E CALIBRAZIONE DEI DUE LIMITI ====================
+const sensorPanel={open:false,paintAt:0,probeAt:0,probeMotion:0,probeOrientation:0,firstDegrees:null,moved:false,capture:false,left:0,right:0,filtered:0};
+function steeringLimits(){return{left:clamp(Number(settings.sensorLeftLimit)||CONFIG.input.maxTilt,CONFIG.input.minCalibratedTilt,CONFIG.input.maxCalibratedTilt),right:clamp(Number(settings.sensorRightLimit)||CONFIG.input.maxTilt,CONFIG.input.minCalibratedTilt,CONFIG.input.maxCalibratedTilt)}}
+function sensorRangeSummary(){const l=steeringLimits();return'Sinistra '+l.left.toFixed(0)+'° · destra '+l.right.toFixed(0)+'°'}
+function sensorControlValue(degrees){
+ const d=degrees*(settings.invert?-1:1),limits=steeringLimits(),limit=d<0?limits.left:limits.right;
+ const x=clamp((Math.abs(d)-settings.dead)/Math.max(1,limit-settings.dead),0,1);
+ return Math.sign(d)*Math.pow(x,settings.response)*settings.sensitivity;
+}
+async function probeSensors(){
+ sensorPanel.capture=false;sensorPanel.left=0;sensorPanel.right=0;sensorPanel.probePending=true;$('sensorGuide').textContent='1. Tieni il telefono nella posizione di guida e premi Memorizza centro.';
+ sensorPanel.probeAt=performance.now();sensorPanel.probeMotion=input.motionEvents||0;sensorPanel.probeOrientation=input.orientationEvents||0;
+ sensorPanel.firstDegrees=null;sensorPanel.moved=false;
+ const permission=requestSensorPermissions();$('sensorCheckState').textContent='Verifica in corso: tieni il telefono in orizzontale e ruotalo leggermente.';
+ await permission;sensorPanel.probePending=false;paintSensorPanel(true);
+}
+function openSensorPanel(){
+ if(state==='crash'){toast('Attendi la ripartenza prima di calibrare.');return}
+ if(state==='race'||state==='countdown')pauseGame('Calibrazione sensore: la gara è ferma.');
+ clearInput();sensorPanel.open=true;sensorPanel.capture=false;sensorPanel.left=0;sensorPanel.right=0;
+ $('sensorPanel').classList.remove('hidden');$('sensorGuide').textContent='1. Tieni il telefono nella posizione di guida e premi Memorizza centro.';
+ void probeSensors();paintSensorPanel(true);
+}
+function centerForLimits(){
+ if(!sensorReading().alive){$('sensorGuide').textContent='Prima attiva il sensore e attendi dati validi.';return}
+ rememberCenter();sensorPanel.capture=true;sensorPanel.left=0;sensorPanel.right=0;sensorPanel.filtered=0;sensorPanel.paintAt=performance.now();
+ $('sensorGuide').textContent='2. Ruota comodamente a sinistra e a destra. I due massimi vengono rilevati automaticamente; poi premi Salva limiti.';
+ paintSensorPanel(true);
+}
+function paintSensorPanel(force=false){
+ if(!sensorPanel.open)return;const now=performance.now();if(!force&&now-sensorPanel.paintAt<100)return;
+ const dt=clamp((now-sensorPanel.paintAt)/1000,.001,.25);sensorPanel.paintAt=now;
+ const r=sensorReading(),d=r.degrees*(settings.invert?-1:1),elapsed=Math.max(.1,(now-sensorPanel.probeAt)/1000);
+ if(r.alive){
+  if(sensorPanel.firstDegrees===null)sensorPanel.firstDegrees=d;
+  if(Math.abs(d-sensorPanel.firstDegrees)>CONFIG.input.verifyMovementDegrees)sensorPanel.moved=true;
+  if(sensorPanel.capture){sensorPanel.filtered=damp(sensorPanel.filtered,d,CONFIG.input.calibrationFilter,dt);sensorPanel.left=Math.max(sensorPanel.left,-sensorPanel.filtered);sensorPanel.right=Math.max(sensorPanel.right,sensorPanel.filtered)}
+ }
+ const motionFresh=input.motion&&now-input.motion.time<CONFIG.input.sensorTimeout,orientationFresh=input.orientation&&now-input.orientation.time<CONFIG.input.sensorTimeout;
+ const motionAPI=typeof window.DeviceMotionEvent!=='undefined',orientationAPI=typeof window.DeviceOrientationEvent!=='undefined';
+ const hz=(count,base)=>Math.max(0,Math.round((count-base)/elapsed));
+ $('motionProbe').textContent=motionFresh?'Dati validi · '+hz(input.motionEvents||0,sensorPanel.probeMotion)+' Hz':motionAPI?'API presente · nessun dato recente':'API non disponibile';
+ $('orientationProbe').textContent=orientationFresh?'Dati validi · '+hz(input.orientationEvents||0,sensorPanel.probeOrientation)+' Hz':orientationAPI?'API presente · nessun dato recente':'API non disponibile';
+ $('sensorLiveDegrees').textContent=r.alive?(d>=0?'+':'')+d.toFixed(1)+'°':'—';
+ $('sensorSourceLabel').textContent=r.alive?'Lettura attiva: '+(input.sensorSource==='motion'?'movimento / gravità':'orientamento'):'Nessuna lettura utilizzabile';
+ const policy=document.permissionsPolicy||document.featurePolicy;
+ const blocked=policy?.allowsFeature&&(!policy.allowsFeature('accelerometer')||!policy.allowsFeature('gyroscope'));
+ let status;
+ if(r.alive)status=sensorPanel.moved?'Movimento rilevato: il sensore risponde alla rotazione.':'Dati validi ricevuti. Ruota il telefono per verificare la risposta.';
+ else if(!window.isSecureContext)status='Apri il gioco in Chrome o Safari da un indirizzo HTTPS.';
+ else if(input.permission==='denied')status='Permesso negato: abilita i sensori nelle impostazioni del sito e riprova.';
+ else if(blocked)status='Accesso ai sensori bloccato dalla pagina contenitore. Apri il gioco direttamente nel browser.';
+ else status=now-sensorPanel.probeAt<CONFIG.input.sensorTimeout?'In attesa dei dati del telefono…':'Nessun dato utilizzabile ricevuto. Lo sterzo touch resta disponibile.';
+ $('sensorCheckState').textContent=status;
+ const left=clamp(sensorPanel.left,0,CONFIG.input.maxCalibratedTilt),right=clamp(sensorPanel.right,0,CONFIG.input.maxCalibratedTilt);
+ $('sensorLeftPeak').textContent=left.toFixed(1)+'°';$('sensorRightPeak').textContent=right.toFixed(1)+'°';
+ $('sensorSavedRange').textContent='Limiti salvati: '+sensorRangeSummary();
+ $('sensorCenter').disabled=!r.alive||!!sensorPanel.probePending;
+ $('sensorSaveLimits').disabled=!(sensorPanel.capture&&r.alive&&left>=CONFIG.input.minCalibratedTilt&&right>=CONFIG.input.minCalibratedTilt);
+ $('sensorDirection').style.transform='translateX('+clamp(d/CONFIG.input.maxCalibratedTilt,-1,1)*90+'px)';
+}
+function saveSensorLimits(){
+ paintSensorPanel(true);if($('sensorSaveLimits').disabled)return;
+ settings.sensorLeftLimit=clamp(sensorPanel.left,CONFIG.input.minCalibratedTilt,CONFIG.input.maxCalibratedTilt);
+ settings.sensorRightLimit=clamp(sensorPanel.right,CONFIG.input.minCalibratedTilt,CONFIG.input.maxCalibratedTilt);
+ sensorPanel.capture=false;save();$('sensorGuide').textContent='Calibrazione salvata. Riporta il telefono al centro prima di riprendere; i limiti restano memorizzati.';
+ $('sensorRangeSaved').textContent=sensorRangeSummary();paintSensorPanel(true);
+}
+function closeSensorPanel(){sensorPanel.open=false;sensorPanel.capture=false;$('sensorPanel').classList.add('hidden');$('sensorRangeSaved').textContent=sensorRangeSummary();refreshSensorStatus()}
+$('sensorMenuOpen').onclick=openSensorPanel;$('sensorSettingsOpen').onclick=openSensorPanel;
+$('sensorProbe').onclick=()=>void probeSensors();$('sensorCenter').onclick=centerForLimits;$('sensorSaveLimits').onclick=saveSensorLimits;$('sensorClose').onclick=closeSensorPanel;
+$('sensorResetLimits').onclick=()=>{settings.sensorLeftLimit=CONFIG.input.maxTilt;settings.sensorRightLimit=CONFIG.input.maxTilt;sensorPanel.capture=false;save();$('sensorGuide').textContent='Limiti ripristinati a '+CONFIG.input.maxTilt+'° per lato.';$('sensorRangeSaved').textContent=sensorRangeSummary();paintSensorPanel(true)};
+
+// ==================== AUDIO: solo sintesi Web Audio ====================
+const audio={ctx:null,master:null,voices:[],active:false,shiftUntil:0,
+ async init(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();this.master=c.createGain();this.master.gain.value=settings.volume;const comp=c.createDynamicsCompressor();this.master.connect(comp);comp.connect(c.destination);
+  const n=c.sampleRate*2,buffer=c.createBuffer(1,n,c.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<n;i++)data[i]=Math.random()*2-1;
+  const noise=()=>{const src=c.createBufferSource();src.buffer=buffer;src.loop=true;src.start();return src};
+  const filtered=(source,type,freq,gain)=>{const f=c.createBiquadFilter();f.type=type;f.frequency.value=freq;const g=c.createGain();g.gain.value=gain;source.connect(f);f.connect(g);g.connect(this.master);return{f,g}};
+  this.wind=filtered(noise(),'lowpass',800,0);this.crowd=filtered(noise(),'bandpass',1150,0);
+  const squeal=c.createOscillator();squeal.type='sawtooth';squeal.frequency.value=1150;this.tyre=filtered(squeal,'bandpass',1600,0);squeal.start();
+  for(let i=0;i<4;i++){const o=c.createOscillator(),o2=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o2.type='triangle';f.type='lowpass';f.frequency.value=1500;g.gain.value=0;o.connect(f);o2.connect(f);f.connect(g);const pan=c.createStereoPanner?c.createStereoPanner():null;if(pan){g.connect(pan);pan.connect(this.master)}else g.connect(this.master);o.start();o2.start();this.voices.push({o,o2,f,g,pan})}
+ }await this.ctx.resume();this.active=true},
+ tone(freq,duration=.12,volume=.12,end=freq,type='sine'){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,end),t+duration);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+duration+.02)},
+ shift(down){if(!this.ctx)return;this.shiftUntil=this.ctx.currentTime+.11;this.tone(down?210:125,down?.14:.065,.13,down?510:55,'triangle')},
+ update(){if(!this.ctx||!player)return;const c=this.ctx,t=c.currentTime,on=['race','countdown','crash'].includes(state);this.master.gain.setTargetAtTime(on?settings.volume:0,t,.06);const p=player,base=p.rpm/60*(bike.stroke===2?1:2),cut=t<this.shiftUntil?.23:1;
+ this.voices.forEach((v,i)=>{if(i===0){v.o.type=bike.stroke===2?'sawtooth':'triangle';v.o.frequency.setTargetAtTime(Math.max(25,base),t,.03);v.o2.frequency.setTargetAtTime(Math.max(25,base*(bike.stroke===2?2.005:.503)),t,.03);v.f.frequency.setTargetAtTime(500+p.rpm*.13+input.throttle*1300,t,.04);v.g.gain.setTargetAtTime(CONFIG.audio.engine*(.3+.7*input.throttle)*cut,t,.025)}else{
+ const nearby=ais.filter(a=>a.finished===null&&Math.abs(physicalGap(a.s,p.s))<180).sort((a,b)=>Math.abs(physicalGap(a.s,p.s))-Math.abs(physicalGap(b.s,p.s))),a=nearby[i-1];if(!a){v.g.gain.setTargetAtTime(0,t,.1);return}const ds=physicalGap(a.s,p.s),dl=a.l-p.l,d=Math.hypot(ds,dl),relative=Math.sign(ds)*(a.v-p.v),doppler=clamp(343/(343+relative),.75,1.3);v.o.frequency.setTargetAtTime((110+a.v*4)*doppler,t,.06);v.o2.frequency.setTargetAtTime((220+a.v*8)*doppler,t,.06);v.g.gain.setTargetAtTime(CONFIG.audio.opponent/(1+d*.16),t,.1);if(v.pan)v.pan.pan.setTargetAtTime(clamp(dl/8,-1,1),t,.08)}});
+ this.wind.g.gain.setTargetAtTime(CONFIG.audio.wind*(p.v/(bike.top/3.6))**2,t,.12);this.wind.f.frequency.setTargetAtTime(450+p.v*23,t,.1);this.tyre.g.gain.setTargetAtTime(Math.max(0,Math.abs(p.lean/rad)-51)/12*.022,t,.08);const near=Math.max(0,1-Math.min(mod(p.s,track.L),track.L-mod(p.s,track.L))/170);this.crowd.g.gain.setTargetAtTime(CONFIG.audio.crowd*near,t,.4)
+ }};
+// ==================== FISICA: velocità, cambio, piega, proiezione Frenet ====================
+function makePlayer(){return{s:mode==='time'?0:-31,l:mode==='time'?0:3.7,v:0,error:0,lean:0,rpm:bike.idle,gear:1,gearTimer:0,fall:0,shield:CONFIG.physics.respawnShield,finished:null,laps:[],best:Infinity,passTimes:{},previousAhead:{},leanPoints:0,passes:0}}
+function gearStep(p,dt){p.gearTimer=Math.max(0,p.gearTimer-dt);const peak=(p.v/(bike.top/3.6))*bike.maxRPM*.97*bike.ratios[p.gear-1];let rpm=Math.max(bike.idle+input.throttle*2800,peak);if(p.gearTimer===0){if(rpm>bike.shift&&p.gear<bike.gears){p.gear++;p.gearTimer=.23;audio.shift(false)}else if(rpm<bike.down&&p.gear>1){const next=peak*bike.ratios[p.gear-2]/bike.ratios[p.gear-1];if(next<bike.shift){p.gear--;p.gearTimer=.28;audio.shift(true)}}}p.rpm=damp(p.rpm,Math.min(bike.maxRPM,rpm),14,dt)}
+function crash(reason){if(state!=='race'||player.shield>0)return;state='crash';crashT=0;invalidateLap('Caduta');clearInput();audio.tone(80,.4,.18,25,'sawtooth');toast(reason+' · Ripartenza in pista');}
+function physics(dt){
+ const p=player,c=getControls(dt),f=CONFIG.physics,a=track.at(p.s),off=Math.abs(p.l)>CONFIG.graphics.width/2+CONFIG.lapRules.curbWidth;p.shield=Math.max(0,p.shield-dt);
+ p.lean=damp(p.lean,c.steer*bike.lean*rad,bike.roll,dt);
+ session.slip=mode!=='time'&&ais.some(r=>r.finished===null&&physicalGap(r.s,p.s)>0&&physicalGap(r.s,p.s)<f.slipRange&&Math.abs(r.l-p.l)<f.slipWidth);
+ const vmax=bike.top/3.6*(session.slip?1+f.slipBonus:1),ratio=p.v/vmax;
+ let acc=c.gas*(bike.accel*(1-.66*ratio))-(f.drag*p.v*p.v+f.rolling)-c.brake*(off?f.gravelBrake:bike.brake)-(1-c.gas)*f.engineBrake;
+ if(p.gearTimer>.12)acc-=bike.accel*.25;if(off)acc-=f.gravelDrag+.045*p.v*p.v;
+ if(p.v>vmax)acc-=5*(p.v-vmax);p.v=clamp(p.v+acc*dt,0,vmax);gearStep(p,dt);
+ // yawRate = g*tan(piega)/v. Piega filtrata, curvatura della pista indipendente.
+ const yawRate=f.g*f.leanForce*Math.tan(p.lean)/Math.max(p.v,12),denom=clamp(1-a.k*p.l,.45,1.65),ds=p.v*Math.cos(p.error)/denom*dt;
+ p.error=angle(p.error+yawRate*dt-a.k*ds);p.s+=ds;p.l+=p.v*Math.sin(p.error)*dt;
+ updateLapLimits(dt,p.l);if(p.v>12&&Math.abs(p.lean/rad)>CONFIG.scoring.leanThreshold&&!off)p.leanPoints+=CONFIG.scoring.leanPerSecond*dt;
+ if(p.v<f.lowSpeed&&Math.abs(p.lean/rad)>f.fallLean)p.fall+=dt;else p.fall=Math.max(0,p.fall-dt*2);if(p.fall>f.fallDelay)crash('Piega eccessiva a bassa velocità');
+ if(Math.abs(p.l)>CONFIG.graphics.barrier-1){if(p.v*Math.abs(Math.sin(p.error))>f.barrierImpact)crash('Impatto con le barriere');else{p.l=Math.sign(p.l)*(CONFIG.graphics.barrier-1.3);p.v*=.97;p.error*=.7}}
+ if(Math.abs(p.error)>2&&p.v<3){p.error=damp(p.error,0,2,dt);p.l=damp(p.l,0,.5,dt)}
+ const next=(session.completed+1)*track.L;if(p.s>=next){const fraction=clamp((p.s-next)/Math.max(ds,.001),0,1),crossTime=session.time-dt*fraction;completeLap(crossTime);}
+ if(state!=='race')return;
+ // Sorpassi contati solo quando si supera realmente un rivale, con cooldown.
+ for(const r of ais){const ahead=r.s>p.s,was=session.ahead[r.id];if(was&&!ahead&&Math.abs(r.s-p.s)<8&&p.shield<=0&&!off&&(session.time-(p.passTimes[r.id]||-100)>CONFIG.scoring.passCooldown)){p.passes++;p.passTimes[r.id]=session.time;toast('SORPASSO +'+CONFIG.scoring.pass)}session.ahead[r.id]=ahead;
+  if(r.finished===null&&Math.abs(physicalGap(r.s,p.s))<1.7&&Math.abs(r.l-p.l)<f.collisionWidth&&p.shield<=0){const impact=Math.abs(r.v-p.v)+Math.abs(Math.sin(p.error)*p.v);if(impact>f.collisionImpact)crash('Contatto in gara');else{p.v*=.985;p.l+=(p.l>=r.l?1:-1)*dt*3;shake=.018}}
+ }
+ if(p.s>=Math.max(0,next-track.L)&&session.time-session.lastSample>=.1){session.trace.push([session.time-session.lapStart,mod(p.s,track.L),p.l,p.error,p.lean]);session.lastSample=session.time}
+}
+// ==================== LIMITI PISTA E GHOST DI ALLENAMENTO ====================
+function invalidateLap(reason){
+ if(!session)return;const first=!session.invalid;session.invalid=true;
+ session.invalidReasons??=[];if(!session.invalidReasons.includes(reason))session.invalidReasons.push(reason);
+ if(first)toast('GIRO NON VALIDO · '+reason+'. Il ghost di allenamento viene comunque registrato.');
+}
+function updateLapLimits(dt,lateral){
+ const cfg=CONFIG.lapRules,edge=CONFIG.graphics.width/2+cfg.curbWidth+cfg.limitMargin;
+ session.offTrackRun??=0;session.offTrackTotal??=0;
+ if(Math.abs(lateral)>edge){session.offTrackRun+=dt;session.offTrackTotal+=dt}else session.offTrackRun=0;
+ if(Math.abs(lateral)>edge+cfg.hardOffTrack)invalidateLap('Uscita ampia / taglio');
+ else if(session.offTrackRun>cfg.offTrackGrace||session.offTrackTotal>cfg.offTrackTotal)invalidateLap('Fuori pista');
+}
+function replayUsable(r){
+ if(!r||!Number.isFinite(r.time)||r.time<=0||!Array.isArray(r.samples)||r.samples.length<2)return false;
+ let previous=-Infinity;for(const s of r.samples){if(!Array.isArray(s)||s.length<5||!s.slice(0,5).every(Number.isFinite)||s[0]<previous)return false;previous=s[0]}
+ return Math.abs(r.samples[0][0])<.01&&Math.abs(r.samples[r.samples.length-1][0]-r.time)<.1;
+}
+function chooseGhost(){
+ const official=saved.records[recordKey()],practice=saved.practiceGhosts[recordKey()];
+ if(replayUsable(official))return{...official,practice:false};
+ if(replayUsable(practice))return{...practice,practice:true};return null;
+}
+function ghostStatusText(){
+ if(!settings.ghostEnabled)return'GHOST DISATTIVATO';const r=session?.ghostReplay;
+ if(!r)return'GHOST · DOPO IL PRIMO GIRO';
+ return(r.practice?'GHOST ALLENAMENTO · ':'GHOST RECORD · ')+fmt(r.time);
+}
+function completeLap(time){
+ const lapTime=time-session.lapStart,valid=!session.invalid,reasons=[...(session.invalidReasons||[])];
+ player.laps.push({time:lapTime,valid,reasons});session.completed++;if(valid)player.best=Math.min(player.best,lapTime);
+ const samples=[[0,0,session.trace[0]?.[2]??0,0,0],...session.trace.filter(x=>x[0]>0&&x[0]<lapTime),[lapTime,track.L,player.l,player.error,player.lean]];
+ const replay={time:lapTime,samples,valid,reasons};let changed=false;
+ if(valid&&(!replayUsable(session.record)||lapTime<session.record.time)){
+  session.record=replay;saved.records[recordKey()]=replay;changed=true;audio.tone(1120,.25,.1,1680);toast('NUOVO RECORD · '+fmt(lapTime));
+ }else if(valid){audio.tone(780,.15,.08);toast('GIRO '+session.completed+' · '+fmt(lapTime))}
+ else{
+  const old=saved.practiceGhosts[recordKey()];if(!replayUsable(old)||lapTime<old.time){saved.practiceGhosts[recordKey()]=replay;changed=true}
+  audio.tone(250,.15,.08);toast('GIRO NON VALIDO · '+(reasons.join(', ')||'Fuori pista')+' · ghost di allenamento salvato.');
+ }
+ session.ghostReplay=chooseGhost();if(changed)save();
+ session.lapStart=time;session.trace=[];session.invalid=false;session.invalidReasons=[];session.offTrackRun=0;session.offTrackTotal=0;session.lastSample=time;
+ if(session.completed>=choice.laps){player.finished=time;finishRace()}
+}
+function ghostUpdate(){
+ if(!ghost)return;const rec=session?.ghostReplay;
+ // La traccia è validata una sola volta in chooseGhost(), non a ogni frame.
+ if(!settings.ghostEnabled||!rec?.samples||rec.samples.length<2||state!=='race'){ghost.visible=false;return}
+ const t=session.time-session.lapStart;if(t>rec.time){ghost.visible=false;return}
+ const samples=rec.samples;let lo=0,hi=samples.length-1;
+ while(hi-lo>1){const mid=(lo+hi)>>1;if(samples[mid][0]<=t)lo=mid;else hi=mid}
+ const a=samples[lo],b=samples[hi],f=clamp((t-a[0])/Math.max(.001,b[0]-a[0]),0,1),gS=mix(a[1],b[1],f),l=mix(a[2],b[2],f),p=atObject(ghost,gS,l);
+ ghost.rotation.y=p.yaw-(a[3]+angle(b[3]-a[3])*f);ghost.userData.lean.rotation.z=mix(a[4],b[4],f);
+ const distance=Math.hypot(physicalGap(gS,player.s),l-player.l);
+ ghost.visible=distance>CONFIG.ghost.minVisibleDistance&&distance<CONFIG.ghost.maxVisibleDistance;
+}
+
+// ==================== IA: traiettoria, anticipo frenata, sorpassi, scie ====================
+function desiredSpeed(s,aggression){
+ const d=CONFIG.ai.difficulty[choice.difficulty],top=bike.top/3.6;let target=top*d;
+ // Inviluppo di frenata: v^2 <= v_curva^2 + 2*a*distanza.
+ for(let dist=0;dist<=CONFIG.ai.brakeLook;dist+=CONFIG.ai.lookStep){const k=Math.abs(track.at(s+dist).k),corner=Math.sqrt(CONFIG.physics.g*CONFIG.ai.grip/Math.max(k,.0001))*d;const brake=bike.brake*(.58+aggression*.19);target=Math.min(target,Math.sqrt(corner*corner+2*brake*dist))}return target;
+}
+function updateAI(dt,now){
+ const targetFinish=choice.laps*track.L;
+ for(const r of ais){if(r.finished!==null)continue;const p=track.at(r.s);let ideal=clamp(p.k*180-track.at(r.s+55).k*110,-2.5,2.5),target=desiredSpeed(r.s,r.aggression),draft=false;
+  let front=null;for(const o of[...ais,player]){if(o===r||o.finished!==null)continue;const d=physicalGap(o.s,r.s);if(d>0&&d<CONFIG.ai.passingDistance&&Math.abs(o.l-r.l)<3&&(!front||d<front.d))front={o,d}}
+  if(front){draft=Math.abs(front.o.l-r.l)<2.3;if(front.d<18){const side=r.passSide;const candidate=clamp(front.o.l+side*CONFIG.ai.passingOffset,-5.8,5.8);const blocked=ais.some(o=>o!==r&&o!==front.o&&Math.abs(physicalGap(o.s,r.s))<8&&Math.abs(o.l-candidate)<1.3);if(!blocked)ideal=candidate;else if(front.d<6)target=Math.min(target,front.o.v*.96)}}
+  if(draft)target*=1.025;const acc=target>r.v?bike.accel*(.71+r.aggression*.2)*(1-.62*r.v/(bike.top/3.6)):-bike.brake*(.62+r.aggression*.18);r.v=clamp(r.v+acc*dt,0,Math.max(target,r.v+Math.min(acc,0)*dt));
+  const prev=r.s;r.s+=r.v*dt;r.l=damp(r.l,ideal,CONFIG.ai.lateralRate,dt);r.lean=damp(r.lean,Math.atan(r.v*r.v*p.k/CONFIG.physics.g),5,dt);
+  if(Math.floor(Math.max(0,r.s)/track.L)>Math.floor(Math.max(0,prev)/track.L)){const boundary=Math.floor(r.s/track.L)*track.L,finish=now-(r.s-boundary)/Math.max(r.v,1);const lap=finish-r.lapStart;r.laps.push(lap);r.best=Math.min(r.best,lap);r.lapStart=finish;}
+  if(r.s>=targetFinish){r.finished=now-(r.s-targetFinish)/Math.max(r.v,1);r.s=targetFinish}
+ }
+}
+function sortedRiders(){return[player,...ais].sort((a,b)=>{if(a.finished!==null&&b.finished!==null)return a.finished-b.finished;if(a.finished!==null)return-1;if(b.finished!==null)return 1;return b.s-a.s})}
+function physicalGap(b,a){return mod(b-a+track.L/2,track.L)-track.L/2}
+function rankPlayer(){return player?sortedRiders().indexOf(player)+1:1}
+// ==================== GHOST / GARA / CAMPIONATO ====================
+function recordKey(){return choice.track+'-'+choice.bike}
+function champData(){return saved.champ[choice.bike]||{round:0,points:{},history:[]}}
+function setupRace(){
+ choice.bike=+$('bikeSelect').value;choice.track=+$('trackSelect').value;choice.difficulty=+$('difficulty').value;choice.laps=+$('lapsSelect').value;mode=$('modeSelect').value;
+ if(mode==='champ'){const champ=champData();choice.track=champ.round%CONFIG.tracks.length;$('trackSelect').value=choice.track;}
+ bike=CONFIG.bikes[choice.bike];track=makeTrack(CONFIG.tracks[choice.track]);session={time:0,lapStart:0,completed:0,count:5.7,invalid:false,invalidReasons:[],offTrackRun:0,offTrackTotal:0,ghostReplay:chooseGhost(),trace:[],lastSample:0,ahead:{},slip:false,record:saved.records[recordKey()]||null};
+ player=makePlayer();ais=[];buildWorld();buildCockpit();
+ if(mode!=='time')CONFIG.riders.slice(0,CONFIG.ai.count).forEach((a,i)=>{const g=makeBike(a[2],a[1]);world.add(g);const r={id:i,name:a[0],number:a[1],color:a[2],s:-3-Math.floor(i/3)*7,l:(i%3-1)*3.7,v:0,lean:0,aggression:CONFIG.ai.aggression[i],passSide:i%2?1:-1,finished:null,lapStart:0,laps:[],best:Infinity,mesh:g};ais.push(r);session.ahead[i]=r.s>player.s});
+ ghost=makeBike(0x6be9de,0,true);world.add(ghost);ghost.visible=false;state='countdown';countStage=-1;headRoll=0;crashT=0;clearInput();input.autoCenter=true;['menu','pause','settings','result','champModal'].forEach(id=>$(id).classList.add('hidden'));$('hud').classList.remove('hidden');updateControlVisibility();$('fade').style.opacity=0;accumulator=0;updateMenu();renderScene(0);toast(session.ghostReplay?ghostStatusText():'Il primo giro registra il ghost. Sterzo a sinistra · destra ↑ GAS / ↓ FRENO');
+}
+function finishRace(){
+ state='result';clearInput();$('countdown').textContent='';$('mobileControls').classList.add('hidden');
+ // Si porta a termine la simulazione dei soli avversari: distacchi di arrivo,
+ // non stime ottenute dividendo il distacco metrico per la velocità corrente.
+ let simTime=session.time;for(let n=0;n<9000&&ais.some(r=>r.finished===null);n++){simTime+=.1;updateAI(.1,simTime)}
+ const order=sortedRiders(),rank=order.indexOf(player)+1,fast=order.reduce((a,b)=>b.best<a.best?b:a,order[0]),base=mode==='time'?0:(CONFIG.scoring.positions[rank-1]||0),bonus=mode!=='time'&&fast===player&&Number.isFinite(player.best)?CONFIG.scoring.fastLap:0,arcade=base+bonus+player.passes*CONFIG.scoring.pass+Math.floor(player.leanPoints);
+ if(mode==='champ'){
+  let ch=champData();if(ch.round>=4)ch={round:0,points:{},history:[]};for(let i=0;i<order.length;i++){const r=order[i],name=r===player?'TU':r.name;ch.points[name]=(ch.points[name]||0)+(CONFIG.scoring.positions[i]||0)+(r===fast?CONFIG.scoring.fastLap:0)}ch.history.push({track:choice.track,rank,best:Number.isFinite(player.best)?player.best:null});ch.round++;saved.champ[choice.bike]=ch;save();
+ }
+ $('resultTitle').textContent=mode==='time'?'Il cronometro ha parlato.':rank===1?'Il gradino più alto.':'P'+rank+' · Bandiera a scacchi.';
+ $('resultSummary').textContent=`${track.cfg.name} / ${bike.name} · Best ${fmt(player.best)} · ${base+bonus} punti GP · ${player.passes} sorpassi · ${Math.floor(player.leanPoints)} bonus piega · ${arcade} punti arcade.`+(storageOK?'':' Salvataggio persistente non disponibile.')+(session.ghostReplay?' '+ghostStatusText()+'. Disponibile dal prossimo giro o premendo Riparti con il ghost.':'');
+ const leader=order[0].finished;$('resultStandings').innerHTML=mode==='time'?'<p>Giro più veloce valido: <b class="highlight">'+fmt(player.best)+'</b><br>'+(session.ghostReplay?.practice?'Ghost di allenamento salvato: il giro non vale come record.':'Il miglior ghost è salvato per questa pista e classe.')+' Premi Riparti con il ghost per iniziare una nuova sessione.</p>':'<b>Ordine di arrivo</b><table><thead><tr><th>P</th><th>Pilota</th><th>Distacco</th><th>Best</th></tr></thead><tbody>'+order.map((r,i)=>`<tr class="${r===player?'highlight':''}"><td>${i+1}</td><td>${r===player?'TU':r.name}${r===fast?' ⚡':''}</td><td>${i===0?fmt(r.finished):r.finished===null?'DNF':'+'+(r.finished-leader).toFixed(3)}</td><td>${fmt(r.best)}</td></tr>`).join('')+'</tbody></table>';
+ $('resultLaps').innerHTML='<table><thead><tr><th>Giro</th><th>Tempo</th><th>Stato</th></tr></thead><tbody>'+player.laps.map((l,i)=>`<tr><td>${i+1}</td><td>${fmt(l.time)}</td><td>${l.valid?'Valido':(l.reasons||[]).join(', ')||'Fuori pista'}</td></tr>`).join('')+'</tbody></table><p>GP: 25–20–16–13–11–10–9–8–7–6–5–4…<br>Giro veloce +2 GP; sorpasso +5 arcade; piega oltre 40° +2 arcade/s. Uscite brevi tollerate: 0,45 s consecutive / 1,25 s totali. Giri non validi: solo ghost di allenamento, nessun record.</p>';
+ $('again').textContent=mode==='champ'?'Prossimo round':session.ghostReplay?'Riparti con il ghost':'Corri ancora';if(mode==='champ'&&champData().round>=4)$('again').textContent='Nuovo campionato';$('result').classList.remove('hidden');updateMenu();
+}
+function pauseGame(reason='La gara è in pausa.'){if(state!=='race'&&state!=='countdown')return;beforePause=state;state='pause';clearInput();$('pauseText').textContent=reason;$('pause').classList.remove('hidden');$('mobileControls').classList.add('hidden')}
+function resume(){if(state!=='pause')return;audio.init().catch(()=>{});state=beforePause;clearInput();$('pause').classList.add('hidden');$('settings').classList.add('hidden');lastTime=performance.now();accumulator=0}
+function returnMenu(){state='menu';clearInput();$('hud').classList.add('hidden');$('mobileControls').classList.add('hidden');['pause','result','settings'].forEach(id=>$(id).classList.add('hidden'));$('menu').classList.remove('hidden');$('fade').style.opacity=0;updateMenu();}
+// ==================== RENDERING / CAMERA / HUD ====================
+function renderScene(dt){
+ if(!player||!track)return;
+ for(const r of ais){const p=atObject(r.mesh,r.s,r.l);r.mesh.userData.lean.rotation.z=clamp(r.lean,-1.1,1.1);for(const wheel of r.mesh.userData.wheels)wheel.rotation.x-=r.v*dt/.31;r.mesh.visible=r.finished===null&&(Math.abs(physicalGap(r.s,player.s))<650||state==='menu')}
+ ghostUpdate();const p=player,a=track.at(p.s),yaw=a.yaw-p.error;
+ headRoll=damp(headRoll,p.lean*CONFIG.graphics.headComp,CONFIG.graphics.headLag,dt);const noise=CONFIG.graphics.vibration*(p.v/(bike.top/3.6))**2+(Math.abs(p.l)>9?.006:0),t=performance.now()/1000;
+ camera.fov=CONFIG.graphics.cameraFOV+Math.min(8,p.v*.075);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ camera.position.set(a.x+a.nx*p.l,CONFIG.graphics.cameraHeight,a.z+a.nz*p.l);camera.position.y+=Math.sin(t*43)*noise;
+ camera.rotation.order='YXZ';camera.rotation.set(-.025+Math.sin(t*37)*noise,yaw+Math.PI,-headRoll+Math.sin(t*61)*noise,'YXZ');
+ // Three camera guarda -Z, yaw del mondo definito da atan2(dx,dz).
+ camera.rotation.y=yaw+Math.PI;
+ if(state==='crash'){const f=Math.min(crashT,1);camera.rotation.z+=f*1.2;camera.position.y=Math.max(.22,camera.position.y-f*.8)}
+ cockpitRoll.rotation.z=-(p.lean-headRoll)*.25;cockpitRoll.position.y=Math.sin(t*47)*noise*.45;gloveRight.rotation.x=-input.throttle*.15;gloveLeft.rotation.x=input.brake*.1;
+ if(shake>0){camera.rotation.z+=Math.sin(t*90)*shake;shake=Math.max(0,shake-dt*.08)}
+ if(sky){sky.position.copy(camera.position);sky.scale.setScalar(camera.far*.94)}renderer.render(scene,camera);
+}
+function mapDraw(canvas,riders=true){
+ if(!track)return;const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,b=track.bounds,scale=Math.min((w-24)/(b.maxX-b.minX),(h-24)/(b.maxZ-b.minZ)),cx=(b.maxX+b.minX)/2,cz=(b.maxZ+b.minZ)/2;
+ const project=p=>[w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale];c.clearRect(0,0,w,h);c.lineJoin='round';c.strokeStyle='#607b80';c.lineWidth=riders?6:5;c.beginPath();for(let i=0;i<track.n;i+=5){const p=project(track.pts[i]);if(i===0)c.moveTo(...p);else c.lineTo(...p)}c.closePath();c.stroke();
+ const start=project(track.at(0));c.fillStyle='#dcff52';c.fillRect(start[0]-3,start[1]-3,6,6);
+ if(riders&&player){for(const r of ais){const p=track.at(r.s),xy=project(p);c.fillStyle=hex(r.color);c.beginPath();c.arc(...xy,3.6,0,7);c.fill()}const p=project(track.at(player.s));c.fillStyle='#dcff52';c.strokeStyle='#0b1a20';c.lineWidth=3;c.beginPath();c.arc(...p,6,0,7);c.fill();c.stroke()}
+}
+function updateHUD(){
+ updateControlVisibility();if(!session)return;refreshSensorStatus();const drive=clamp(input.throttle-input.brake,-1,1);$('driveKnob').style.top=(50-drive*50)+'%';$('drivePad').setAttribute('aria-valuenow',Math.round(drive*100));$('drivePad').setAttribute('aria-valuetext',drive>.01?'Gas '+Math.round(drive*100)+'%':drive<-.01?'Freno '+Math.round(-drive*100)+'%':'Neutro');const rank=rankPlayer(),lap=Math.min(choice.laps,Math.floor(Math.max(0,player.s)/track.L)+1);$('position').innerHTML=rank+'<em>/'+(mode==='time'?1:12)+'</em>';$('lap').innerHTML=lap+'<em>/'+choice.laps+'</em>';$('lapTime').textContent=fmt(session.time-session.lapStart);$('bestTime').textContent=fmt(Math.min(player.best,session.record?.time||Infinity));
+ const order=sortedRiders(),i=order.indexOf(player),start=clamp(i-1,0,Math.max(0,order.length-3));$('standings').innerHTML=mode==='time'?'<div class="standing me">TIME ATTACK</div><div class="standing">'+(session.invalid?'NON VALIDO: '+session.invalidReasons.join(', '):'TIME ATTACK')+'</div>':order.slice(start,start+3).map((r,j)=>`<div class="standing ${r===player?'me':''}">${start+j+1} &nbsp; ${r===player?'TU':r.name}</div>`).join('');
+ $('brakeFill').style.width=input.brake*100+'%';$('gasFill').style.width=input.throttle*100+'%';$('bottomInfo').textContent=(session.invalid?'NON VALIDO: '+session.invalidReasons.join(', ')+' · ':session.slip?'SCIA ATTIVA · ':'')+track.cfg.name.toUpperCase()+' / '+bike.label+' / '+Math.round(player.v*3.6)+' km/h';
+ $('ghostStatus').textContent=ghostStatusText();mapDraw($('minimap'));drawDash();if(performance.now()>toastUntil)$('toast').style.opacity=0;
+}
+function toast(text){$('toast').textContent=text;$('toast').style.opacity=1;toastUntil=performance.now()+3000}
+function resize(){const q=CONFIG.graphics.quality[settings.quality];renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.dpr,2));renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.far=q.far;camera.updateProjectionMatrix();if(scene.fog){scene.fog.near=q.far*.37;scene.fog.far=q.far}}
+window.addEventListener('resize',()=>{resize();if(innerWidth<innerHeight&&matchMedia('(pointer:coarse)').matches)pauseGame('Ruota il telefono per riprendere.')});
+$('world').addEventListener('webglcontextlost',e=>{e.preventDefault();pauseGame('Contesto WebGL perso. Ricarica per ripristinare la grafica.');$('fatal').classList.remove('hidden');$('fatalText').textContent='Contesto grafico perso. Ricarica la pagina per ripartire; i record già salvati restano sul dispositivo.'});
+function tick(now){
+ requestAnimationFrame(tick);paintSensorPanel();const dt=Math.min(CONFIG.maxFrame,Math.max(0,(now-lastTime)/1000||0));lastTime=now;
+ if(state==='countdown'){
+  session.count-=dt;getControls(dt);const stage=clamp(5-Math.ceil(session.count),0,5);if(stage!==countStage){countStage=stage;if(stage>0)audio.tone(430,.12,.13);sessionLights.forEach((m,i)=>m.emissive.setHex(i<stage?0xff1500:0x100000))}
+  $('countdown').textContent=session.count>1?'●'.repeat(Math.max(1,stage)):'';
+  if(session.count<=0){state='race';session.time=0;session.lapStart=0;$('countdown').textContent='VIA';setTimeout(()=>{$('countdown').textContent=''},800);audio.tone(980,.5,.15);sessionLights.forEach(m=>m.emissive.setHex(0x071008));toast('VIA · '+track.cfg.name)}
+ }else if(state==='race'){
+  accumulator+=dt;let steps=0;while(accumulator>=CONFIG.fixedStep&&steps++<14&&state==='race'){session.time+=CONFIG.fixedStep;updateAI(CONFIG.fixedStep,session.time);physics(CONFIG.fixedStep);accumulator-=CONFIG.fixedStep;}
+ }else if(state==='crash'){
+  session.time+=dt;updateAI(dt,session.time);crashT+=dt;$('fade').style.opacity=clamp((crashT-.35)/.65,0,1);
+  if(crashT>CONFIG.physics.crashDuration){player.l=0;player.error=0;player.lean=0;player.v=CONFIG.physics.recoverySpeed;player.fall=0;player.shield=CONFIG.physics.respawnShield;state='race';clearInput();input.autoCenter=true;$('fade').style.opacity=0;headRoll=0;toast('DI NUOVO IN PISTA · protezione 3 s')}
+ }
+ if(state==='menu'&&player){player.v=0;player.lean=0;player.error=Math.sin(now*.00015)*.055;}
+ renderScene(dt);audio.update();hudClock+=dt;if(hudClock>.06){hudClock=0;updateHUD()}
+}
+// ==================== UI / EVENTI / INIZIALIZZAZIONE ====================
+function menuChoice(){choice.bike=+$('bikeSelect').value;choice.track=+$('trackSelect').value;choice.difficulty=+$('difficulty').value;choice.laps=+$('lapsSelect').value;mode=$('modeSelect').value;if(mode==='champ'){choice.track=champData().round%4;$('trackSelect').value=choice.track}$('trackSelect').disabled=mode==='champ';if(state==='menu'){bike=CONFIG.bikes[choice.bike];track=makeTrack(CONFIG.tracks[choice.track]);session=null;player=makePlayer();ais=[];buildWorld();buildCockpit();}updateMenu()}
+function updateMenu(){const cfg=CONFIG.tracks[choice.track],r=saved.records[recordKey()];$('trackName').textContent=cfg.name;$('trackSpec').textContent=(cfg.length/1000).toFixed(3)+' KM · '+cfg.turns+' CURVE';$('record').textContent='RECORD '+fmt(r?.time??Infinity);if(state==='menu'||state==='result')mapDraw($('trackPreview'),false);const ch=champData();$('champStatus').textContent=mode==='champ'?ch.round>=4?'Campionato concluso · prossima partenza: nuova stagione.':'Campionato · round '+(ch.round+1)+'/4 · '+cfg.name:'';}
+for(const [i,b]of CONFIG.bikes.entries())$('bikeSelect').add(new Option(b.name+' — '+b.label,i));for(const [i,t]of CONFIG.tracks.entries())$('trackSelect').add(new Option(t.name,i));for(const id of['bikeSelect','trackSelect','difficulty','lapsSelect','modeSelect'])$(id).addEventListener('change',menuChoice);
+function openSettings(){if(state==='race'||state==='countdown')pauseGame();$('sensitivity').value=settings.sensitivity;$('response').value=settings.response;$('deadzone').value=settings.dead;$('volume').value=settings.volume;$('quality').value=settings.quality;$('invert').checked=settings.invert;$('racingLine').checked=settings.line;$('ghostEnabled').checked=settings.ghostEnabled;$('sensorRangeSaved').textContent=sensorRangeSummary();$('settings').classList.remove('hidden')}
+$('settingsOpen').onclick=openSettings;$('pauseSettings').onclick=openSettings;$('settingsClose').onclick=()=>{Object.assign(settings,{sensitivity:+$('sensitivity').value,response:+$('response').value,dead:+$('deadzone').value,volume:+$('volume').value,quality:+$('quality').value,invert:$('invert').checked,line:$('racingLine').checked,ghostEnabled:$('ghostEnabled').checked});if(racingLine)racingLine.visible=settings.line;save();resize();$('settings').classList.add('hidden')};
+$('pauseBtn').onclick=()=>pauseGame();$('resume').onclick=resume;$('quit').onclick=returnMenu;$('calibrateBtn').onclick=openSensorPanel;$('resultMenu').onclick=returnMenu;
+$('start').onclick=async()=>{const btn=$('start');btn.disabled=true;btn.textContent='PREPARAZIONE…';try{await enableDevice();setupRace()}catch(e){$('sensorStatus').textContent='Avvio non riuscito: '+e.message;returnMenu()}finally{btn.disabled=false;btn.textContent='START / SCENDI IN PISTA'}};
+$('again').onclick=async()=>{if(mode==='champ'&&champData().round>=4){saved.champ[choice.bike]={round:0,points:{},history:[]};save()}try{await enableDevice();setupRace()}catch(e){toast(e.message)}};
+function showChamp(){const ch=champData(),rows=Object.entries(ch.points).sort((a,b)=>b[1]-a[1]);$('champTable').innerHTML='<p>'+CONFIG.bikes[choice.bike].name+' · '+ch.round+'/4 gare completate.</p>'+(rows.length?'<table><thead><tr><th>P</th><th>Pilota</th><th>Punti</th></tr></thead><tbody>'+rows.map(([name,pts],i)=>`<tr class="${name==='TU'?'highlight':''}"><td>${i+1}</td><td>${name}</td><td>${pts}</td></tr>`).join('')+'</tbody></table>':'<p>Nessuna gara disputata in questa classe.</p>');$('champModal').classList.remove('hidden')}
+$('champOpen').onclick=showChamp;$('champClose').onclick=()=>$('champModal').classList.add('hidden');$('champReset').onclick=()=>{saved.champ[choice.bike]={round:0,points:{},history:[]};save();if(mode==='champ'){$('trackSelect').value=0;menuChoice()}showChamp()};
+// Blocca il menu contestuale e lo zoom solo sulla superficie di guida.
+touch.addEventListener('contextmenu',e=>e.preventDefault());touch.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+menuChoice();resize();$('start').disabled=false;$('start').textContent='START / SCENDI IN PISTA';$('sensorStatus').textContent=matchMedia('(pointer:coarse)').matches?'Tocca Start per attivare sensori e audio.':'Test desktop pronto · tastiera WASD o frecce.';
+requestAnimationFrame(tick);
+// API di sola lettura per diagnostica manuale, senza dipendenze di sviluppo.
+window.APEX={get state(){return state},get telemetry(){return{speed:player?.v*3.6,lean:player?.lean/rad,s:player?.s,lateral:player?.l,lap:session?.completed,ai:ais.length,sensor:input.sensorSource,sensorDegrees:input.sensorDegrees,brakingBoards:track?.brakeMarkers?.length,ghost:session?.ghostReplay?(session.ghostReplay.practice?'practice':'record'):null,drive:input.drive,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles}},get config(){return CONFIG}};
+})();
+</script>
+</body>
+</html>
