@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoE: router e cache</title>
+<meta name="description" content="Come un modello Mixture of Experts sceglie quali esperti attivare, e quanto conta la cache VRAM/RAM quando i pesi stanno su SSD.">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --surface-2:#efeee9; --border:#dedcd5;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#7a7873;
+  --vram:#2a78d6; --ram:#eb6834; --ssd:#d9d7d0; --hit:#0b0b0b;
+  --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#34332f;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8d86;
+    --vram:#3987e5; --ram:#d95926; --ssd:#3a3936; --hit:#ffffff;
+    --accent:#3987e5;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#34332f;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8d86;
+  --vram:#3987e5; --ram:#d95926; --ssd:#3a3936; --hit:#ffffff;
+  --accent:#3987e5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;line-height:1.2;margin:0 0 8px}
+h2{font-size:20px;margin:40px 0 8px}
+h3{font-size:15px;margin:0 0 8px;color:var(--text-2);font-weight:600}
+p{margin:0 0 12px;color:var(--text-2);max-width:72ch}
+.lead{font-size:16px}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+label{font-size:13px;color:var(--text-2);display:flex;flex-direction:column;gap:4px;min-width:140px;flex:1}
+label span.v{color:var(--text);font-variant-numeric:tabular-nums}
+select,input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+button{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tokens{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tok{padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);cursor:pointer;font-size:14px}
+.tok.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.bars{display:grid;gap:2px;align-items:end;height:160px;margin-top:8px}
+.bar{background:var(--ssd);border-radius:4px 4px 0 0;position:relative;min-height:2px}
+.bar.top{background:var(--vram)}
+.barlbl{display:grid;gap:2px;font-size:11px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.gate{font-size:13px;color:var(--text-2);margin-top:8px}
+.gate b{color:var(--text)}
+table{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
+th,td{padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--muted);font-weight:500}
+.chip{display:inline-block;min-width:22px;text-align:center;padding:0 4px;margin:1px;border-radius:4px;background:var(--surface-2);border:1px solid var(--border)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}
+.kpi{background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.kpi .n{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text-2);margin:6px 0}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+canvas{width:100%;display:block;border-radius:6px;background:var(--surface-2)}
+.note{font-size:13px;color:var(--muted)}
+.wrapc{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:12px;color:var(--text);display:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;margin:8px 0}
+.pipe div{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+.pipe i{color:var(--muted);font-style:normal}
+</style>
+</head>
+<body>
+<main>
+<h1>Come funziona un Mixture of Experts</h1>
+<p class="lead">In ogni layer, un piccolo <b>router</b> assegna un punteggio a tutti gli esperti e ne attiva solo i migliori <i>k</i>. Qui sotto puoi vederlo all'opera su un modello giocattolo. Più in basso, un simulatore stima quanto spesso un modello vero deve leggere pesi dall'SSD, in base a quanta VRAM e RAM hai.</p>
+
+<h2>1. Il router, token per token</h2>
+<p>Ogni token arriva al layer come un vettore <code>h</code>. Il router calcola <code>h · W_router</code>, ottiene un punteggio per ogni esperto, tiene i <i>k</i> più alti e li normalizza con una softmax. Ogni layer ha un suo router, quindi lo stesso token sceglie esperti diversi in layer diversi.</p>
+<div class="pipe"><div>h (vettore del token)</div><i>→</i><div>punteggi = h · W_router</div><i>→</i><div>top-k</div><i>→</i><div>softmax → pesi</div><i>→</i><div>Σ peso·esperto(h)</div></div>
+
+<div class="card">
+  <div class="row">
+    <label>Esperti nel layer <span class="v" id="tEv">16</span><input type="range" id="tE" min="8" max="32" step="4" value="16"></label>
+    <label>Esperti attivi (k) <span class="v" id="tKv">2</span><input type="range" id="tK" min="1" max="6" value="2"></label>
+    <label>Layer <span class="v" id="tLv">1</span><input type="range" id="tL" min="1" max="4" value="1"></label>
+  </div>
+  <h3 style="margin-top:12px">Clicca un token</h3>
+  <div class="tokens" id="toks"></div>
+  <div class="legend"><span><span class="sw" style="background:var(--vram)"></span>scelto (top-k)</span><span><span class="sw" style="background:var(--ssd)"></span>scartato</span></div>
+  <div class="bars" id="bars"></div>
+  <div class="barlbl" id="barlbl"></div>
+  <div class="gate" id="gate"></div>
+</div>
+
+<div class="card">
+  <h3>Quali esperti sceglie ogni token, in ogni layer</h3>
+  <p class="note">Ogni riga è un token e ogni colonna un layer. I numeri sono gli indici degli esperti scelti. Le combinazioni cambiano da un layer all'altro, e alcuni esperti compaiono più spesso di altri: su questo sbilanciamento si basa la cache.</p>
+  <div style="overflow-x:auto"><table id="routeTable"></table></div>
+</div>
+
+<h2>2. Perché conta per l'SSD</h2>
+<p>Il router di un layer si può calcolare solo dopo aver finito il layer precedente. Quindi sai quali esperti ti servono solo un attimo prima di usarli. Se quell'esperto non è in VRAM o in RAM, devi aspettare di leggerlo dall'SSD. Le tecniche che aiutano sono tre:</p>
+<ul style="color:var(--text-2);max-width:72ch">
+  <li><b>Tenere sempre in GPU</b> la parte usata da ogni token: attenzione, router, esperti condivisi ed embedding.</li>
+  <li><b>Cache degli esperti</b>: l'uso è sbilanciato, quindi pochi esperti coprono molti accessi.</li>
+  <li><b>Prefetch</b>: applicare il router del layer successivo allo stato attuale indovina in anticipo una parte degli esperti, che puoi caricare mentre calcoli.</li>
+</ul>
+
+<h2>3. Simulatore di cache</h2>
+<p>Il simulatore genera il routing con una distribuzione sbilanciata (Zipf) diversa per ogni layer, con un po' di località tra token consecutivi. Poi assegna gli esperti a VRAM, RAM e SSD e stima il tempo per token <b>in base alla sola banda</b>: è un limite teorico. In pratica si ottiene di solito il 40–70% di quel valore.</p>
+
+<div class="card">
+  <div class="grid2">
+    <div>
+      <h3>Modello</h3>
+      <div class="row">
+        <label>Preset<select id="model"></select></label>
+        <label>Quantizzazione<select id="quant">
+          <option value="2.7">~2.7 bit (Q2_K)</option>
+          <option value="3.9">~3.9 bit (Q3_K_M)</option>
+          <option value="4.8" selected>~4.8 bit (Q4_K_M)</option>
+          <option value="4.25">~4.25 bit (MXFP4)</option>
+          <option value="8.5">~8.5 bit (Q8_0)</option>
+        </select></label>
+      </div>
+      <p class="note" id="modelInfo" style="margin-top:8px"></p>
+    </div>
+    <div>
+      <h3>Hardware</h3>
+      <div class="row">
+        <label>GPU<select id="gpu">
+          <option value="8,272">8 GB, 272 GB/s (RTX 4060)</option>
+          <option value="12,360" selected>12 GB, 360 GB/s (RTX 3060)</option>
+          <option value="16,288">16 GB, 288 GB/s (RTX 4060 Ti)</option>
+          <option value="24,936">24 GB, 936 GB/s (RTX 3090)</option>
+          <option value="32,1790">32 GB, 1790 GB/s (RTX 5090)</option>
+        </select></label>
+        <label>RAM libera per il modello (GB)<input type="number" id="ram" value="48" min="0" max="1024" step="8"></label>
+        <label>Banda RAM (GB/s)<input type="number" id="ramBw" value="60" min="10" max="800" step="5"></label>
+        <label>SSD<select id="ssd">
+          <option value="3.5">NVMe Gen3 (~3.5 GB/s)</option>
+          <option value="7" selected>NVMe Gen4 (~7 GB/s)</option>
+          <option value="12">NVMe Gen5 (~12 GB/s)</option>
+          <option value="0.5">SATA (~0.5 GB/s)</option>
+        </select></label>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <label>Politica di cache<select id="policy">
+      <option value="static">Statica: esperti più usati (profilati)</option>
+      <option value="lru">Dinamica: LRU</option>
+    </select></label>
+    <label>Sbilanciamento uso esperti <span class="v" id="skewv">0.8</span><input type="range" id="skew" min="0" max="1.6" step="0.1" value="0.8"></label>
+    <label>Località tra token <span class="v" id="locv">25%</span><input type="range" id="loc" min="0" max="0.6" step="0.05" value="0.25"></label>
+    <label>Precisione prefetch <span class="v" id="pfv">0%</span><input type="range" id="pf" min="0" max="0.9" step="0.1" value="0"></label>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="primary" id="run">Simula 400 token</button>
+    <span class="note" id="status"></span>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h3>Mappa esperti: layer (righe) × esperti (colonne)</h3>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--vram)"></span>in VRAM</span>
+    <span><span class="sw" style="background:var(--ram)"></span>in RAM</span>
+    <span><span class="sw" style="background:var(--ssd);border:1px solid var(--border)"></span>solo su SSD</span>
+    <span><span class="sw" style="background:var(--hit)"></span>usato dall'ultimo token</span>
+  </div>
+  <div class="wrapc"><canvas id="heat" height="240"></canvas><div class="tip" id="heatTip"></div></div>
+
+  <h3 style="margin-top:16px">Da dove arrivano gli esperti, token per token</h3>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--vram)"></span>VRAM</span>
+    <span><span class="sw" style="background:var(--ram)"></span>RAM</span>
+    <span><span class="sw" style="background:var(--muted)"></span>SSD</span>
+  </div>
+  <div class="wrapc"><canvas id="strip" height="140"></canvas><div class="tip" id="stripTip"></div></div>
+  <p class="note" style="margin-top:8px">Con la politica LRU la cache parte vuota: si vedono i primi token pescare quasi tutto dall'SSD e poi migliorare man mano che la cache si riempie.</p>
+</div>
+
+<h2>4. Cosa ne ricavi</h2>
+<ul style="color:var(--text-2);max-width:72ch">
+  <li>Le letture dall'SSD sono quasi sempre il collo di bottiglia. Ogni GB di RAM in più che contiene esperti vale molto più di una GPU più veloce.</li>
+  <li>Più l'uso degli esperti è sbilanciato, più la cache rende. Nei modelli veri lo sbilanciamento esiste ma è moderato, perché l'addestramento lo limita apposta.</li>
+  <li>In pratica, con llama.cpp il file viene letto con <code>mmap</code> e la page cache del sistema operativo fa da cache RAM in automatico. Con <code>--override-tensor</code> (o <code>-ot</code>) decidi quali tensori vanno in GPU e quali restano su CPU/RAM.</li>
+</ul>
+<p class="note">Le dimensioni dei modelli sono approssimate, ricavate dalle configurazioni pubbliche (layer, numero di esperti, dimensioni). Il simulatore è didattico, non è un benchmark.</p>
+</main>
+
+<script>
+// ---------- utility ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $=id=>document.getElementById(id);
+
+// ---------- 1. router giocattolo ----------
+const SENT="Il gatto dorme sul divano , poi calcola 3 + 4 = 7".split(" ");
+const DIM=8;
+let selTok=1;
+function hVec(tok,layer){const r=mulberry32(hashStr(tok)+layer*7919);return Array.from({length:DIM},()=>gauss(r))}
+function Wr(E,layer){const r=mulberry32(1000+layer*31+E);return Array.from({length:DIM},()=>Array.from({length:E},()=>gauss(r)*0.6))}
+function route(tok,E,K,layer){
+  const h=hVec(tok,layer),W=Wr(E,layer);
+  const s=Array.from({length:E},(_,e)=>h.reduce((a,x,i)=>a+x*W[i][e],0));
+  const idx=s.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,K);
+  const m=Math.max(...idx.map(x=>x[0]));const ex=idx.map(x=>Math.exp(x[0]-m));const Z=ex.reduce((a,b)=>a+b,0);
+  return {scores:s,top:idx.map((x,j)=>({e:x[1],w:ex[j]/Z}))};
+}
+function renderToy(){
+  const E=+$("tE").value,K=+$("tK").value,L=+$("tL").value;
+  $("tEv").textContent=E;$("tKv").textContent=K;$("tLv").textContent=L;
+  $("toks").innerHTML=SENT.map((t,i)=>`<span class="tok${i===selTok?" sel":""}" data-i="${i}">${t}</span>`).join("");
+  const {scores,top}=route(SENT[selTok],E,K,L);
+  const mn=Math.min(...scores),mx=Math.max(...scores);
+  const topSet=new Set(top.map(t=>t.e));
+  $("bars").style.gridTemplateColumns=`repeat(${E},1fr)`;
+  $("barlbl").style.gridTemplateColumns=`repeat(${E},1fr)`;
+  $("bars").innerHTML=scores.map((v,i)=>`<div class="bar${topSet.has(i)?" top":""}" style="height:${(8+92*(v-mn)/(mx-mn||1)).toFixed(1)}%" title="Esperto ${i}: punteggio ${v.toFixed(2)}"></div>`).join("");
+  $("barlbl").innerHTML=scores.map((_,i)=>`<div>${i}</div>`).join("");
+  $("gate").innerHTML=`Token <b>«${SENT[selTok]}»</b>, layer ${L}: attiva ${top.map(t=>`esperto <b>${t.e}</b> (peso ${(t.w*100).toFixed(0)}%)`).join(", ")}. Gli altri ${E-K} esperti non vengono nemmeno letti.`;
+  let html=`<tr><th>Token</th>${[1,2,3,4].map(l=>`<th>Layer ${l}</th>`).join("")}</tr>`;
+  const cnt=new Array(E).fill(0);
+  SENT.forEach(t=>{html+=`<tr><td>${t}</td>`;for(let l=1;l<=4;l++){const r=route(t,E,K,l);r.top.forEach(x=>{if(l===L)cnt[x.e]++});html+=`<td>${r.top.map(x=>`<span class="chip">${x.e}</span>`).join("")}</td>`}html+="</tr>"});
+  $("routeTable").innerHTML=html;
+}
+$("toks").addEventListener("click",e=>{const i=e.target.dataset.i;if(i!==undefined){selTok=+i;renderToy()}});
+["tE","tK","tL"].forEach(id=>$(id).addEventListener("input",renderToy));
+renderToy();
+
+// ---------- 3. simulatore ----------
+// expertParams in miliardi; alwaysOn = parametri usati da ogni token (attenzione, esperti condivisi, embedding, layer densi)
+const MODELS={
+  dsv3:{name:"DeepSeek V3/R1 (671B, 37B attivi)",L:58,E:256,K:8,exp:3*7168*2048/1e9,always:16.6},
+  kimi:{name:"Kimi K2 (1T, 32B attivi)",L:60,E:384,K:8,exp:3*7168*2048/1e9,always:11},
+  qwen:{name:"Qwen3-235B-A22B",L:94,E:128,K:8,exp:3*4096*1536/1e9,always:7.8},
+  gptoss:{name:"gpt-oss-120b (117B, 5.1B attivi)",L:36,E:128,K:4,exp:3*2880*2880/1e9,always:1.5},
+  mixtral:{name:"Mixtral 8x22B (141B, 39B attivi)",L:56,E:8,K:2,exp:3*6144*16384/1e9,always:5.2},
+};
+$("model").innerHTML=Object.entries(MODELS).map(([k,m])=>`<option value="${k}">${m.name}</option>`).join("");
+const fmt=(x,d=1)=>x.toLocaleString("it-IT",{maximumFractionDigits:d,minimumFractionDigits:d});
+
+function setup(){
+  const m=MODELS[$("model").value],bits=+$("quant").value;
+  const [vram,vbw]=$("gpu").value.split(",").map(Number);
+  const ram=+$("ram").value,ramBw=+$("ramBw").value,ssdBw=+$("ssd").value;
+  const expGB=m.exp*bits/8, alwaysGB=m.always*bits/8;
+  const totalGB=alwaysGB+expGB*m.L*m.E;
+  const vramFree=Math.max(0,vram-1.5); // riserva per KV cache e buffer
+  const alwaysV=Math.min(alwaysGB,vramFree), alwaysR=alwaysGB-alwaysV;
+  const nV=Math.floor((vramFree-alwaysV)/expGB);
+  const nR=Math.max(0,Math.floor((ram-alwaysR)/expGB));
+  $("modelInfo").innerHTML=`${m.L} layer MoE × ${m.E} esperti, ${m.K} attivi per layer. Ogni esperto pesa ~${fmt(expGB*1024,0)} MB, la parte sempre attiva ~${fmt(alwaysGB)} GB, il totale ~${fmt(totalGB,0)} GB.<br>Per ogni token servono ${m.L*m.K} esperti, cioè ~${fmt(expGB*m.L*m.K)} GB.`;
+  return {m,expGB,alwaysGB,alwaysV,alwaysR,nV:Math.min(nV,m.L*m.E),nR,vbw,ramBw,ssdBw,totalGB,ramShort:alwaysR>ram};
+}
+
+let sim=null, anim=null;
+function runSim(){
+  if(anim)cancelAnimationFrame(anim);
+  const S=setup(),{m}=S;
+  const skew=+$("skew").value,loc=+$("loc").value,pf=+$("pf").value,policy=$("policy").value;
+  const rnd=mulberry32(42);
+  // popolarità per layer: Zipf con permutazione casuale
+  const cdf=[],prob=[];
+  for(let l=0;l<m.L;l++){
+    const perm=Array.from({length:m.E},(_,i)=>i);for(let i=m.E-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[perm[i],perm[j]]=[perm[j],perm[i]]}
+    const p=new Float64Array(m.E);let Z=0;for(let r=0;r<m.E;r++){p[perm[r]]=1/Math.pow(r+1,skew);Z+=p[perm[r]]}
+    const c=new Float64Array(m.E);let a=0;for(let e=0;e<m.E;e++){p[e]/=Z;a+=p[e];c[e]=a}
+    cdf.push(c);prob.push(p);
+  }
+  // collocazione: 0=SSD 1=RAM 2=VRAM
+  const N=m.L*m.E, tier=new Uint8Array(N);
+  let lruV=new Map(), lruR=new Map();
+  if(policy==="static"){
+    const ord=Array.from({length:N},(_,i)=>i).sort((a,b)=>prob[Math.floor(b/m.E)][b%m.E]-prob[Math.floor(a/m.E)][a%m.E]);
+    for(let i=0;i<N;i++)tier[ord[i]]=i<S.nV?2:(i<S.nV+S.nR?1:0);
+  }
+  sim={S,cdf,tier,lruV,lruR,policy,pf,loc,prev:Array.from({length:m.L},()=>[]),hist:[],last:new Set(),t:0,T:400,rnd};
+  $("status").textContent="";
+  const step=()=>{for(let i=0;i<8&&sim.t<sim.T;i++)simToken();drawAll();if(sim.t<sim.T)anim=requestAnimationFrame(step)};
+  step();
+}
+function touch(id){
+  // LRU a due livelli: VRAM -> (espulso) RAM -> (espulso) solo SSD
+  const s=sim,S=s.S;let src;
+  if(s.lruV.has(id)){s.lruV.delete(id);s.lruV.set(id,1);return 2}
+  if(s.lruR.has(id)){s.lruR.delete(id);src=1}else src=0;
+  if(S.nV>0){s.lruV.set(id,1);s.tier[id]=2;
+    if(s.lruV.size>S.nV){const old=s.lruV.keys().next().value;s.lruV.delete(old);
+      if(S.nR>0){s.lruR.set(old,1);s.tier[old]=1;if(s.lruR.size>S.nR){const o2=s.lruR.keys().next().value;s.lruR.delete(o2);s.tier[o2]=0}}else s.tier[old]=0}}
+  else if(S.nR>0){s.lruR.set(id,1);s.tier[id]=1;if(s.lruR.size>S.nR){const o2=s.lruR.keys().next().value;s.lruR.delete(o2);s.tier[o2]=0}}
+  return src;
+}
+function simToken(){
+  const s=sim,S=s.S,m=S.m,r=s.rnd;
+  let cV=0,cR=0,cS=0,time=0;s.last=new Set();
+  const alwaysPerLayer=(S.alwaysV/S.vbw+S.alwaysR/S.ramBw)/m.L;
+  for(let l=0;l<m.L;l++){
+    const chosen=new Set();let guard=0;
+    while(chosen.size<m.K&&guard++<200){
+      let e;
+      if(s.prev[l].length&&r()<s.loc)e=s.prev[l][Math.floor(r()*s.prev[l].length)];
+      else{const u=r(),c=s.cdf[l];let lo=0,hi=m.E-1;while(lo<hi){const mid=(lo+hi)>>1;if(c[mid]<u)lo=mid+1;else hi=mid}e=lo}
+      chosen.add(e);
+    }
+    s.prev[l]=[...chosen];
+    let tV=0,tR=0,tS=0;
+    for(const e of chosen){
+      const id=l*m.E+e;s.last.add(id);
+      const where=s.policy==="lru"?touch(id):s.tier[id];
+      if(where===2){cV++;tV+=S.expGB/S.vbw}
+      else if(where===1){cR++;tR+=S.expGB/S.ramBw}
+      else{cS++;tS+=S.expGB/S.ssdBw+S.expGB/S.ramBw}
+    }
+    const compute=alwaysPerLayer+tV+tR;
+    const hidden=Math.min(s.pf*tS,compute); // il prefetch nasconde letture dietro al calcolo
+    time+=compute+tS-hidden;
+  }
+  s.hist.push({v:cV,r:cR,s:cS,time});s.t++;
+}
+function drawAll(){
+  const s=sim,S=s.S,m=S.m,h=s.hist;
+  const warm=s.policy==="lru"?h.slice(Math.floor(h.length/4)):h;
+  const sum=warm.reduce((a,x)=>({v:a.v+x.v,r:a.r+x.r,s:a.s+x.s,time:a.time+x.time}),{v:0,r:0,s:0,time:0});
+  const tot=sum.v+sum.r+sum.s||1, n=warm.length||1;
+  const tpt=sum.time/n, ssdGB=sum.s/n*S.expGB;
+  const k=[
+    [fmt(100*sum.v/tot)+"%","esperti da VRAM"],
+    [fmt(100*sum.r/tot)+"%","esperti da RAM"],
+    [fmt(100*sum.s/tot)+"%","esperti da SSD"],
+    [fmt(ssdGB,2)+" GB","letti da SSD per token"],
+    [fmt(tpt,2)+" s","per token (teorico)"],
+    [fmt(1/tpt,2),"token/s teorici · ~"+fmt(0.55/tpt,2)+" reali"],
+  ];
+  $("kpis").innerHTML=k.map(([a,b])=>`<div class="kpi"><div class="n">${a}</div><div class="l">${b}</div></div>`).join("");
+  if(S.ramShort)$("status").textContent="Attenzione: nemmeno la parte sempre attiva entra in VRAM+RAM. Anche quella verrà letta dall'SSD a ogni token, ma la stima non ne tiene conto.";
+  else $("status").textContent=`Cache: ${S.nV.toLocaleString("it-IT")} esperti in VRAM, ${Math.min(S.nR,m.L*m.E).toLocaleString("it-IT")} in RAM, su ${(m.L*m.E).toLocaleString("it-IT")} totali. `+(s.policy==="lru"?"Statistiche calcolate dopo il riscaldamento. ":"")+`Token ${s.t}/${s.T}`;
+  drawHeat();drawStrip();
+}
+function sizeCanvas(c,hCss){const dpr=window.devicePixelRatio||1;const w=c.clientWidth;c.width=Math.round(w*dpr);c.height=Math.round(hCss*dpr);c.style.height=hCss+"px";const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w,h:hCss}}
+function drawHeat(){
+  const s=sim,m=s.S.m,c=$("heat");
+  const rowH=Math.max(2,Math.min(6,Math.floor(360/m.L)));
+  const {ctx,w}=sizeCanvas(c,m.L*rowH);
+  const cw=w/m.E;
+  const col=[css("--ssd"),css("--ram"),css("--vram")],hit=css("--hit");
+  for(let l=0;l<m.L;l++)for(let e=0;e<m.E;e++){
+    const id=l*m.E+e;ctx.fillStyle=s.last.has(id)?hit:col[s.tier[id]];
+    ctx.fillRect(e*cw,l*rowH,Math.max(1,cw-(cw>3?1:0)),rowH-(rowH>3?1:0));
+  }
+  c._geo={cw,rowH};
+}
+function drawStrip(){
+  const s=sim,m=s.S.m,c=$("strip"),{ctx,w,h}=sizeCanvas(c,140);
+  const T=s.T,bw=w/T,tot=m.L*m.K;
+  const cV=css("--vram"),cR=css("--ram"),cS=css("--muted");
+  s.hist.forEach((x,i)=>{
+    let y=h;const seg=[[x.v,cV],[x.r,cR],[x.s,cS]];
+    for(const [v,cl] of seg){const hh=v/tot*h;ctx.fillStyle=cl;ctx.fillRect(i*bw,y-hh,Math.max(1,bw-(bw>3?1:0)),hh);y-=hh}
+  });
+  c._bw=bw;
+}
+// tooltip
+function tipOn(canvas,tip,fn){
+  canvas.addEventListener("mousemove",ev=>{if(!sim)return;const r=canvas.getBoundingClientRect();const x=ev.clientX-r.left,y=ev.clientY-r.top;const t=fn(x,y);if(!t){tip.style.display="none";return}
+    tip.innerHTML=t;tip.style.display="block";const tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,x+12),r.width-tw)+"px";tip.style.top=(y+14)+"px"});
+  canvas.addEventListener("mouseleave",()=>tip.style.display="none");
+}
+const TN=["solo su SSD","in RAM","in VRAM"];
+tipOn($("heat"),$("heatTip"),(x,y)=>{const g=$("heat")._geo;if(!g)return;const m=sim.S.m;const e=Math.floor(x/g.cw),l=Math.floor(y/g.rowH);if(e<0||e>=m.E||l<0||l>=m.L)return;const id=l*m.E+e;return `Layer ${l+1}, esperto ${e}<br>${TN[sim.tier[id]]}${sim.last.has(id)?" · usato ora":""}`});
+tipOn($("strip"),$("stripTip"),x=>{const i=Math.floor(x/$("strip")._bw);const d=sim.hist[i];if(!d)return;const t=d.v+d.r+d.s;return `Token ${i+1}<br>VRAM ${d.v} · RAM ${d.r} · SSD ${d.s} (su ${t})<br>${fmt(d.time,2)} s`});
+
+["skew","loc","pf"].forEach(id=>$(id).addEventListener("input",()=>{$("skewv").textContent=$("skew").value;$("locv").textContent=Math.round($("loc").value*100)+"%";$("pfv").textContent=Math.round($("pf").value*100)+"%"}));
+["model","quant","gpu","ram","ramBw","ssd","policy","skew","loc","pf"].forEach(id=>$(id).addEventListener("change",runSim));
+$("run").addEventListener("click",runSim);
+window.addEventListener("resize",()=>sim&&drawAll());
+if(window.matchMedia)matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{renderToy();sim&&drawAll()});
+runSim();
+</script>
+</body>
+</html>
