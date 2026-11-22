@@ -1,0 +1,10 @@
+html{color-scheme:dark;background:#13121d;color:#fff3dc;font:16px/1.6 system-ui,sans-serif}
+body{margin:0}
+main{max-width:38rem;margin-inline:auto;padding:clamp(2rem,7vw,5rem) 1.25rem}
+h1,h2{line-height:1.15}
+h1{font-size:clamp(1.9rem,6vw,3rem)}
+h2{margin-top:2rem;font-size:1.25rem}
+a{color:#8cecdf;text-underline-offset:.2em}
+a:focus-visible{outline:2px solid #8cecdf;outline-offset:4px}
+.button{display:inline-block;padding:.65rem 1rem;background:#ffcd72;color:#271627;font-weight:750;text-decoration:none}
+li+li{margin-top:.35rem}
