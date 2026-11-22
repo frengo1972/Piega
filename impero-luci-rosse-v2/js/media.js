@@ -14,9 +14,9 @@ const ImperoMedia = (() => {
     return images.get(src);
   }
 
-  function portrait(talent) {
+  function castNumber(talent) {
     const id = Number(talent.id.slice(1)) - 1;
-    return path("cast", (talent.f ? 0 : 8) + (id % 8) + 1);
+    return (talent.f ? 0 : 8) + (id % 8) + 1;
   }
 
   function drawCover(context, image, width, height) {
@@ -28,7 +28,8 @@ const ImperoMedia = (() => {
 
   return {
     load,
-    portrait,
+    portrait: talent => path("cast", castNumber(talent)),
+    fullPortrait: talent => path("cast", `figura-${castNumber(talent)}`),
     drawCover,
     setPhoto: id => path("set", id),
     film: id => path("film", id),

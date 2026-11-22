@@ -135,7 +135,9 @@ body::before{content:"";position:fixed;inset:-20%;z-index:-2;
 .tal{display:flex;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);margin-bottom:9px;position:relative}
 .tal.sel{border-color:var(--pink);background:rgba(255,46,136,.1);box-shadow:0 0 0 1px var(--pink) inset}
 .tal.off{opacity:.45}
-.tal img{width:72px;height:72px;border-radius:12px;flex:none;border:1px solid rgba(255,255,255,.15)}
+.tal-photo{width:clamp(62px,22vw,106px);aspect-ratio:3/5;align-self:start;flex:none;overflow:hidden;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#241920}
+.tal-photo:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.tal-photo img{width:100%;height:100%;display:block;object-fit:contain}
 .tal .tx{flex:1;min-width:0}
 .tal .nm{font-size:15px;font-weight:900;display:flex;align-items:center;gap:6px}
 .tal .nm small{font-size:10px;font-weight:700;color:var(--dim)}
@@ -241,13 +243,13 @@ canvas.chart{width:100%;height:150px;display:block;border-radius:12px;background
 
 /* Fotografie della V2 */
 .neon .edition{display:block;color:var(--gold);font:800 12px/1.5 var(--font);letter-spacing:.22em;margin:8px 0 0}
-.vcard .th img,.tal img,.idcard img{width:100%;height:100%;object-fit:cover;display:block}
-.tal img{width:72px;height:72px}
-.idcard img{width:76px;height:90px}
+.vcard .th img{width:100%;height:100%;object-fit:cover;display:block}
 .vcard .th{background:#211027}
 .location-row img{width:clamp(54px, 16vw, 100px);aspect-ratio:4/3;object-fit:cover;border-radius:8px;flex:none}
 .release-photo,.event-photo{display:block;width:100%;height:clamp(108px,25vh,220px);object-fit:cover;border:1px solid var(--line);border-radius:12px;margin:0 0 12px;background:#211027}
 .mbox{max-height:calc(100dvh - 36px);overflow-y:auto}
+.mbox p:empty{display:none}
+.event-portrait{height:min(58dvh,520px);object-fit:contain;background:#241920}
 #gate{background:linear-gradient(180deg,rgba(13,6,20,.62),#0b0612 83%),url("../assets/film/glamour.webp") center 25% / cover no-repeat,#0b0612}
 .foot a,.guide-back{color:var(--gold)}
 .guide-frame{display:block;width:100%;height:min(64dvh,620px);border:0;border-radius:12px}

@@ -338,9 +338,9 @@ function showModal(o) {
   b.innerHTML = `<span class="kick ${o.kick || ""}">${o.tag || "BREAKING"}</span><h3>${o.title}</h3><p>${o.text}</p><div class="ch"></div>`;
   if (o.photo) {
     const photo = new Image();
-    photo.className = "event-photo";
+    photo.className = o.fullPortrait ? "event-photo event-portrait" : "event-photo";
     photo.src = o.photo;
-    photo.alt = "";
+    photo.alt = o.fullPortrait ? "Ritratto a figura intera di " + o.title : "";
     b.querySelector("p").before(photo);
   }
   const ch = b.querySelector(".ch");
@@ -666,7 +666,6 @@ function renderCatalog() {
     const poster = new Image();
     poster.src = ImperoMedia.film(v.concept);
     poster.alt = "";
-    poster.loading = "lazy";
     d.querySelector(".th").prepend(poster);
     d.querySelector(".ti").textContent = v.title;
     list.appendChild(d);
@@ -703,7 +702,7 @@ function talentCard(t, mode, sel) {
   if (mode === "cand") btns = `<button class="btn" data-act="hire" data-id="${t.id}">INGAGGIA</button>`;
   if (mode === "roster") btns = `${!testOk(t) && !t.testPend ? `<button class="btn gold" data-act="test" data-id="${t.id}">TEST €120</button>` : ""}<button class="btn alt" data-act="fire" data-id="${t.id}">CONGEDA</button>`;
   return `<div class="tal ${sel ? "sel" : ""} ${reason ? "off" : ""}" ${mode === "pick" && !reason ? `data-act="pickcast" data-id="${t.id}"` : ""}>
-    <img src="${ImperoMedia.portrait(t)}" alt="">
+    <button type="button" class="tal-photo" data-act="portrait" data-id="${t.id}" aria-label="Ingrandisci la foto di ${t.name}"><img src="${ImperoMedia.fullPortrait(t)}" alt=""></button>
     <div class="tx"><div class="nm">${t.name}</div>
       <div class="sub">${t.age} anni${mode === "cand" ? "" : " · documenti ✓"} · ${t.f ? "lei" : "lui"} · ${t.scenes} scene</div>
       <div class="bars2"><span>FAMA</span><i style="--v:${t.fame}%"></i><span>MESTIERE</span><i style="--v:${t.skill}%"></i><span>CARISMA</span><i style="--v:${t.chem}%"></i>${mode !== "cand" ? `<span>BENESSERE</span><i class="m" style="--v:${t.morale}%"></i>` : ""}</div>
@@ -871,6 +870,11 @@ SH.release = () => {
 
 // ======================================================================= actions
 const ACT = {
+  portrait(d) {
+    const t = S.roster.find(talent => talent.id === d.id) || S.cands.find(talent => talent.id === d.id);
+    if (!t) return;
+    showModal({ kick: "info", tag: "CASTING", title: t.name, text: "", photo: ImperoMedia.fullPortrait(t), fullPortrait: true, choices: [{ l: "Chiudi foto" }] });
+  },
   hire(d) {
     const t = S.cands.find(c => c.id === d.id); if (!t) return;
     if (S.roster.length >= rosterMax()) return toast(`Scuderia piena (${rosterMax()}). Congeda qualcuno o sali di livello.`, "bad");
